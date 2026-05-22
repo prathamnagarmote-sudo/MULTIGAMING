@@ -78,11 +78,11 @@ export function GameTile({ game, index, onClick }: GameTileProps) {
       onMouseLeave={handleMouseLeave}
       style={{
         transform: `perspective(800px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(${isHovered ? 1.06 : 1}) translateZ(${isHovered ? '20px' : '0px'})`,
-        transition: isHovered 
-          ? "transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.35s ease-out" 
+        transition: isHovered
+          ? "transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.35s ease-out"
           : "transform 0.4s ease-out, box-shadow 0.4s ease-out",
-        boxShadow: isHovered 
-          ? "0 25px 50px -12px rgba(0, 240, 255, 0.45), 0 0 30px rgba(184, 0, 255, 0.25)" 
+        boxShadow: isHovered
+          ? "0 25px 50px -12px rgba(0, 240, 255, 0.45), 0 0 30px rgba(184, 0, 255, 0.25)"
           : "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
         zIndex: isHovered ? 30 : 10,
       }}
