@@ -145,19 +145,24 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             if (isSubscribed) {
               objectUrlsRef.current.push(url);
               
-              // 1. Original ZIP name reference
+              // 1. Original ZIP name reference (with case-insensitive fallbacks)
               pathMap[name] = url;
+              pathMap[name.toLowerCase()] = url;
               
               // 2. Normalized path reference (forward slashes)
               const normalized = name.replace(/\\/g, "/");
               pathMap[normalized] = url;
+              pathMap[normalized.toLowerCase()] = url;
               pathMap[`./${normalized}`] = url;
+              pathMap[`./${normalized.toLowerCase()}`] = url;
 
               // 3. Nested relative reference (if index.html is located in a subfolder)
               if (baseDir && normalized.startsWith(baseDir)) {
                 const relativeToHtml = normalized.substring(baseDir.length);
                 pathMap[relativeToHtml] = url;
+                pathMap[relativeToHtml.toLowerCase()] = url;
                 pathMap[`./${relativeToHtml}`] = url;
+                pathMap[`./${relativeToHtml.toLowerCase()}`] = url;
               }
             }
           });
@@ -182,13 +187,27 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               function resolvePath(url) {
                 if (!url) return url;
                 
-                // 1. If it's already a resolved Blob URL, return directly
-                if (blobUrls.has(url)) return url;
+                // Ensure url is a string to prevent crashes on non-string inputs (like URL objects)
+                let urlStr = '';
+                if (typeof url === 'string') {
+                  urlStr = url;
+                } else if (url instanceof URL) {
+                  urlStr = url.href;
+                } else {
+                  try {
+                    urlStr = String(url);
+                  } catch (e) {
+                    return url;
+                  }
+                }
+                
+                // If it's already a resolved Blob URL, return directly
+                if (blobUrls.has(urlStr)) return url;
                 
                 // Strip hash and query params
-                let cleanUrl = url.split('#')[0].split('?')[0];
+                let cleanUrl = urlStr.split('#')[0].split('?')[0];
                 
-                // 2. Identify prefixes to strip (browser-resolved absolute paths in blob iframe)
+                // Identify prefixes to strip (browser-resolved absolute paths in blob iframe)
                 const origin = window.location.origin;
                 const blobPrefix = 'blob:' + origin + '/';
                 const originPrefix = origin + '/';
@@ -200,22 +219,36 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   relative = relative.substring(originPrefix.length);
                 }
                 
-                // 3. Direct pathMap lookup
+                // Strip browser-resolved UUID folder prefixes (e.g. "d5c808f2-39c2-4a0b-8d76-e17926b484ee/assets/js")
+                relative = relative.replace(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\//, '');
+                
+                // 1. Direct pathMap lookup
                 if (pathMap[relative]) return pathMap[relative];
                 
-                // 4. Try with leading './' removed
+                // 2. Case-insensitive lookup fallback
+                let relativeLower = relative.toLowerCase();
+                if (pathMap[relativeLower]) return pathMap[relativeLower];
+                
+                // 3. Try with leading './' removed
                 let noDot = relative.replace(/^\\.\\//, '');
                 if (pathMap[noDot]) return pathMap[noDot];
+                let noDotLower = noDot.toLowerCase();
+                if (pathMap[noDotLower]) return pathMap[noDotLower];
                 
-                // 5. Try decoding URI encoded characters
+                // 4. Try decoding URI encoded characters
                 try {
                   let decoded = decodeURIComponent(relative);
                   if (pathMap[decoded]) return pathMap[decoded];
+                  let decodedLower = decoded.toLowerCase();
+                  if (pathMap[decodedLower]) return pathMap[decodedLower];
+                  
                   let decodedNoDot = decoded.replace(/^\\.\\//, '');
                   if (pathMap[decodedNoDot]) return pathMap[decodedNoDot];
+                  let decodedNoDotLower = decodedNoDot.toLowerCase();
+                  if (pathMap[decodedNoDotLower]) return pathMap[decodedNoDotLower];
                 } catch (e) {}
                 
-                // 6. Fallback suffix matching as a last resort
+                // 5. Fallback suffix matching as a last resort
                 for (const key in pathMap) {
                   if (relative.endsWith(key) || key.endsWith(relative)) {
                     return pathMap[key];
@@ -319,6 +352,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               safeOverride(HTMLScriptElement.prototype, 'src');
               safeOverride(HTMLLinkElement.prototype, 'href');
               safeOverride(HTMLAudioElement.prototype, 'src');
+              safeOverride(HTMLVideoElement.prototype, 'src');
+              safeOverride(HTMLIFrameElement.prototype, 'src');
+              safeOverride(HTMLTrackElement.prototype, 'src');
               safeOverride(HTMLSourceElement.prototype, 'src');
             })();
           </script>
