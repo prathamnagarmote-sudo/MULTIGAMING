@@ -1032,7 +1032,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   onClick={() => setIsPortraitOverride(isPortraitOverride === null ? !(isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait) : !isPortraitOverride)}
                   className={`p-2.5 rounded-lg border transition-all cursor-pointer ${
                     (isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait)
-                      ? "bg-neon-purple/20 border-neon-purple/30 text-neon-purple shadow-[0_0_12px_rgba(0,255,102,0.2)]" 
+                      ? "bg-neon-purple/20 border-neon-purple/30 text-neon-purple shadow-[0_0_12px_rgba(168,85,247,0.2)]" 
                       : "bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06]"
                   }`}
                   title="Rotate Device Orientation"
@@ -1045,7 +1045,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   onClick={toggleFullscreen}
                   className={`p-2.5 rounded-lg border transition-all cursor-pointer ${
                     isFullscreen 
-                      ? "bg-electric-blue/20 border-electric-blue/30 text-electric-blue shadow-[0_0_12px_rgba(255,0,85,0.2)]"
+                      ? "bg-electric-blue/20 border-electric-blue/30 text-electric-blue shadow-[0_0_12px_rgba(99,102,241,0.2)]"
                       : "bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06]"
                   }`}
                   title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Mode"}
@@ -1058,18 +1058,18 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
         </div>
 
         {/* SIDE SUGGESTIONS BAR (3 cols in LG) */}
-        <div className="lg:col-span-3 flex flex-col h-full bg-[#050508]/40 border border-white/[0.04] rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-white/[0.05]">
-            <Gamepad className="w-4 h-4 text-electric-blue" />
-            <h3 className="text-sm font-heading font-black tracking-wider uppercase">
+        <div className="lg:col-span-3 flex flex-col h-full bg-[#07070c] border border-white/[0.08] rounded-2xl p-4 shadow-xl z-20">
+          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-white/[0.06]">
+            <Gamepad className="w-4 h-4 text-electric-blue animate-pulse-subtle" />
+            <h3 className="text-sm font-heading font-black tracking-wider uppercase text-white/90">
               Play Next Suggestions
             </h3>
           </div>
 
-          <div className="flex flex-col gap-4 overflow-y-auto max-h-[480px] custom-scrollbar pr-1">
+          <div className="grid grid-cols-2 gap-2.5 overflow-y-auto max-h-[620px] custom-scrollbar pr-1">
             {suggestions.map((sug, idx) => (
-              <div key={sug.id} onClick={() => onSelectGame(sug.id)}>
-                <GameTile game={sug} index={idx} />
+              <div key={sug.id} onClick={() => onSelectGame(sug.id)} className="h-full flex">
+                <GameTile game={sug} index={idx} compact={true} />
               </div>
             ))}
           </div>

@@ -39,12 +39,12 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   
-  /* Cyberpunk Custom Colors -> Transformed to High-Octane Esports Gaming Palette */
-  --color-electric-blue: #FF0055; /* Esports Crimson Red / Coral */
-  --color-neon-purple: #00FF66;   /* Razer Acid Green */
-  --color-neon-cyan: #FF5E00;     /* Steam Gaming Orange */
-  --color-deep-violet: #FF003C;   /* Energetic Game Red */
-  --color-neon-pink: #FFD700;     /* Cyberpunk Yellow / Gold */
+  /* Unified eSports Gaming Palette - Sticking to Logo Colors */
+  --color-electric-blue: #6366f1; /* Sleek Royal Indigo */
+  --color-neon-purple: #a855f7;   /* Sleek Neon Purple */
+  --color-neon-cyan: #00e5ff;     /* Sleek Electric Cyan */
+  --color-deep-violet: #4f46e5;   /* Sleek Deep Indigo */
+  --color-neon-pink: #c084fc;     /* Sleek Lavender Pink */
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -56,37 +56,37 @@
 }
 
 :root, .dark {
-  --background: oklch(0.16 0.01 240); /* Graphite charcoal slate */
+  --background: oklch(0.08 0.015 256); /* Obsidian dark charcoal slate */
   --foreground: oklch(0.98 0 0);
-  --card: oklch(0.20 0.015 240); /* Lighter obsidian dark gray */
+  --card: oklch(0.12 0.02 256); /* Obsidian dark card */
   --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.20 0.015 240);
+  --popover: oklch(0.12 0.02 256);
   --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.60 0.25 25); /* Esports Crimson Red */
-  --primary-foreground: oklch(0.12 0 0);
-  --secondary: oklch(0.78 0.26 142); /* Razer Green */
-  --secondary-foreground: oklch(0.98 0 0);
-  --muted: oklch(0.26 0 0);
+  --primary: oklch(0.62 0.21 282); /* Sleek eSports Purple */
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.76 0.18 198); /* Sleek Electric Cyan */
+  --secondary-foreground: oklch(0.12 0 0);
+  --muted: oklch(0.20 0.01 256);
   --muted-foreground: oklch(0.70 0 0);
-  --accent: oklch(0.26 0 0);
+  --accent: oklch(0.20 0.01 256);
   --accent-foreground: oklch(0.98 0 0);
   --destructive: oklch(0.7 0.19 22);
-  --border: oklch(1 0 0 / 18%); /* Brighter borders */
-  --input: oklch(1 0 0 / 22%);  /* Brighter inputs */
-  --ring: oklch(0.60 0.25 25);
+  --border: rgba(255, 255, 255, 0.09); /* Crisp panel separator */
+  --input: rgba(255, 255, 255, 0.07);  /* Crisp input separator */
+  --ring: oklch(0.62 0.21 282);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.55 0 0);
   --chart-3: oklch(0.43 0 0);
   --chart-4: oklch(0.37 0 0);
   --chart-5: oklch(0.26 0 0);
-  --sidebar: oklch(0.16 0.01 240); /* Match graphite look */
+  --sidebar: oklch(0.08 0.015 256);
   --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.60 0.25 25); /* Active items Crimson */
+  --sidebar-primary: oklch(0.62 0.21 282);
   --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.24 0 0);
+  --sidebar-accent: oklch(0.15 0.02 256);
   --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(1 0 0 / 18%); /* Brighter sidebar borders */
-  --sidebar-ring: oklch(0.55 0 0);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: oklch(0.62 0.21 282);
   --radius: 0.75rem;
 }
 
@@ -110,19 +110,19 @@
     @apply bg-white/5 backdrop-blur-md border border-white/10;
   }
   .glass-card {
-    @apply bg-black/40 backdrop-blur-lg border border-white/10 shadow-[0_8px_32px_0_rgba(255,0,85,0.1)];
+    @apply bg-black/40 backdrop-blur-lg border border-white/10 shadow-[0_8px_32px_0_rgba(168,85,247,0.15)];
   }
   .text-glow-blue {
-    text-shadow: 0 0 10px rgba(255, 0, 85, 0.6), 0 0 20px rgba(255, 0, 85, 0.4);
+    text-shadow: 0 0 10px rgba(99, 102, 241, 0.6), 0 0 20px rgba(0, 229, 255, 0.4);
   }
   .text-glow-purple {
-    text-shadow: 0 0 10px rgba(0, 255, 102, 0.6), 0 0 20px rgba(0, 255, 102, 0.4);
+    text-shadow: 0 0 10px rgba(168, 85, 247, 0.6), 0 0 20px rgba(168, 85, 247, 0.4);
   }
   .box-glow-blue {
-    box-shadow: 0 0 20px rgba(255, 0, 85, 0.4);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
   }
   .box-glow-purple {
-    box-shadow: 0 0 20px rgba(0, 255, 102, 0.4);
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
   }
 }
 

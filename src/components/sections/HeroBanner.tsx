@@ -117,7 +117,7 @@ export function HeroBanner({ onPlayGame, onExploreCategory }: HeroBannerProps) {
           <div className="pointer-events-auto">
             <button
               onClick={() => onExploreCategory(activeSlide.targetId)}
-              className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-electric-blue to-neon-cyan text-white font-heading font-black text-xs uppercase tracking-widest hover:brightness-110 hover:scale-[1.03] shadow-[0_0_20px_rgba(255,0,85,0.3)] transition-all duration-300 cursor-pointer"
+              className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-electric-blue to-neon-cyan text-white font-heading font-black text-xs uppercase tracking-widest hover:brightness-110 hover:scale-[1.03] shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all duration-300 cursor-pointer"
             >
               Explore Now
             </button>

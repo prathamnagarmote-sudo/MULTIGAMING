@@ -73,7 +73,7 @@ export function TopBar({ currentView, onNavigate }: TopBarProps) {
         {/* Notification */}
         <button className="relative w-9 h-9 rounded-xl bg-white/[0.05] border border-white/[0.12] flex items-center justify-center text-white/65 hover:text-white/95 hover:bg-white/[0.08] transition-all">
           <Bell className="w-4 h-4" />
-          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-electric-blue rounded-full shadow-[0_0_8px_rgba(255,0,85,0.6)]" />
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-electric-blue rounded-full shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
         </button>
 
         {/* User - Toggles Admin */}

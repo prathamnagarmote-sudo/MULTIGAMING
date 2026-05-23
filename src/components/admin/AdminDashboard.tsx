@@ -545,7 +545,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
                       onClick={() => setIsZipGame(false)}
                       className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer ${
                         !isZipGame
-                          ? "bg-electric-blue text-white shadow-[0_0_12px_rgba(0,240,255,0.25)]"
+                          ? "bg-electric-blue text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]"
                           : "text-white/40 hover:text-white/70"
                       }`}
                     >
@@ -556,7 +556,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
                       onClick={() => setIsZipGame(true)}
                       className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer ${
                         isZipGame
-                          ? "bg-neon-purple text-white shadow-[0_0_12px_rgba(184,0,255,0.25)]"
+                          ? "bg-neon-purple text-white shadow-[0_0_12px_rgba(168,85,247,0.25)]"
                           : "text-white/40 hover:text-white/70"
                       }`}
                     >
@@ -690,7 +690,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
                     onClick={() => setIsPortrait(false)}
                     className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer ${
                       !isPortrait
-                        ? "bg-electric-blue text-white shadow-[0_0_12px_rgba(255,0,85,0.25)]"
+                        ? "bg-electric-blue text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]"
                         : "text-white/40 hover:text-white/70"
                     }`}
                   >
@@ -702,7 +702,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
                     onClick={() => setIsPortrait(true)}
                     className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer ${
                       isPortrait
-                        ? "bg-neon-purple text-white shadow-[0_0_12px_rgba(0,255,102,0.25)]"
+                        ? "bg-neon-purple text-white shadow-[0_0_12px_rgba(168,85,247,0.25)]"
                         : "text-white/40 hover:text-white/70"
                     }`}
                   >

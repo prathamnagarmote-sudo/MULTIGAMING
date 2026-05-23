@@ -29,7 +29,7 @@ export function Sidebar({ currentView, onChangeView }: SidebarProps) {
       <div className={`py-5 flex items-center border-b border-white/[0.06] transition-all duration-300 ${
         isHovered ? "px-5 gap-3" : "justify-center px-0"
       }`}>
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-electric-blue to-neon-purple flex items-center justify-center shadow-[0_0_20px_rgba(255,0,85,0.3)] shrink-0">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-electric-blue to-neon-purple flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.3)] shrink-0">
           <Gamepad2 className="w-5 h-5 text-white" />
         </div>
         <div className={`flex flex-col whitespace-nowrap transition-all duration-300 ${
