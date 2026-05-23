@@ -266,8 +266,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 if (resolved && resolved !== url) {
                   if (input instanceof Request) {
                     input = new Request(resolved, input);
-                  } else if (input instanceof URL) {
-                    input = new URL(resolved);
                   } else {
                     input = resolved;
                   }
