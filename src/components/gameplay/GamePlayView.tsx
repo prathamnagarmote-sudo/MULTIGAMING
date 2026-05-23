@@ -503,6 +503,21 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               safeOverride(HTMLSourceElement.prototype, 'src');
             })();
           </script>
+          <style id="zylo-sandbox-canvas-fix">
+            html, body {
+              width: 100% !important;
+              height: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              overflow: hidden !important;
+              background-color: #000000 !important;
+            }
+            canvas {
+              width: 100% !important;
+              height: 100% !important;
+              display: block !important;
+            }
+          </style>
         `;
 
         // Insert interceptor script at the most robust location in HTML structure
@@ -834,7 +849,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 (isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait)
                   ? isFullscreen 
                     ? "h-[calc(100vh-125px)] aspect-[9/16] rounded-2xl border border-white/10 shadow-2xl my-auto" 
-                    : "aspect-[9/16] h-[640px] max-h-[70vh] max-w-full mx-auto my-4 rounded-xl border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.8)]"
+                    : "w-[380px] sm:w-[400px] max-w-full aspect-[9/16] mx-auto my-4 rounded-xl border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.8)]"
                   : isFullscreen
                     ? "h-[calc(100vh-125px)] aspect-video rounded-2xl border border-white/10 shadow-2xl my-auto"
                     : "w-full aspect-video"
