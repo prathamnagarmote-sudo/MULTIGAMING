@@ -251,11 +251,23 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               // Intercept Fetch API
               const originalFetch = window.fetch;
               window.fetch = function(input, init) {
-                let url = typeof input === 'string' ? input : (input instanceof Request ? input.url : '');
+                let url = '';
+                if (typeof input === 'string') {
+                  url = input;
+                } else if (input instanceof URL) {
+                  url = input.href;
+                } else if (input instanceof Request) {
+                  url = input.url;
+                } else if (input && typeof input.toString === 'function') {
+                  url = input.toString();
+                }
+
                 const resolved = resolvePath(url);
-                if (resolved !== url) {
+                if (resolved && resolved !== url) {
                   if (input instanceof Request) {
                     input = new Request(resolved, input);
+                  } else if (input instanceof URL) {
+                    input = new URL(resolved);
                   } else {
                     input = resolved;
                   }
@@ -266,8 +278,45 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               // Intercept XMLHttpRequest
               const originalOpen = XMLHttpRequest.prototype.open;
               XMLHttpRequest.prototype.open = function(method, url, ...args) {
-                const resolved = resolvePath(url);
-                return originalOpen.call(this, method, resolved, ...args);
+                let urlStr = '';
+                if (typeof url === 'string') {
+                  urlStr = url;
+                } else if (url instanceof URL) {
+                  urlStr = url.href;
+                } else if (url && typeof url.toString === 'function') {
+                  urlStr = url.toString();
+                }
+                const resolved = resolvePath(urlStr);
+                return originalOpen.call(this, method, resolved || url, ...args);
+              };
+
+              // Intercept document.write & document.writeln to parse and rewrite HTML inline relative paths
+              const originalWrite = document.write;
+              document.write = function(html) {
+                if (typeof html === 'string') {
+                  let modifiedHtml = html;
+                  for (const [relativePath, blobUrl] of Object.entries(pathMap)) {
+                    const escapedPath = relativePath.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\\\$&");
+                    const attrRegex = new RegExp('(src|href|value|data)\\\\s*=\\\\s*(["\']?)(\\\\.\\\\/|\\\\/)?' + escapedPath + '(\\\\?[^"\' >\\\\s]*)?(#[^"\' >\\\\s]*)?\\\\2', 'gi');
+                    modifiedHtml = modifiedHtml.replace(attrRegex, '$1="' + blobUrl + '"');
+                  }
+                  return originalWrite.call(this, modifiedHtml);
+                }
+                return originalWrite.apply(this, arguments);
+              };
+
+              const originalWriteln = document.writeln;
+              document.writeln = function(html) {
+                if (typeof html === 'string') {
+                  let modifiedHtml = html;
+                  for (const [relativePath, blobUrl] of Object.entries(pathMap)) {
+                    const escapedPath = relativePath.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\\\$&");
+                    const attrRegex = new RegExp('(src|href|value|data)\\\\s*=\\\\s*(["\']?)(\\\\.\\\\/|\\\\/)?' + escapedPath + '(\\\\?[^"\' >\\\\s]*)?(#[^"\' >\\\\s]*)?\\\\2', 'gi');
+                    modifiedHtml = modifiedHtml.replace(attrRegex, '$1="' + blobUrl + '"');
+                  }
+                  return originalWriteln.call(this, modifiedHtml);
+                }
+                return originalWriteln.apply(this, arguments);
               };
 
               // Intercept dynamic scripts and frames created using element.setAttribute
@@ -275,7 +324,15 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 const originalSetAttribute = Element.prototype.setAttribute;
                 Element.prototype.setAttribute = function(name, value) {
                   if (typeof name === 'string' && ['src', 'href', 'data'].includes(name.toLowerCase())) {
-                    value = resolvePath(value);
+                    let valStr = '';
+                    if (typeof value === 'string') {
+                      valStr = value;
+                    } else if (value instanceof URL) {
+                      valStr = value.href;
+                    } else if (value && typeof value.toString === 'function') {
+                      valStr = value.toString();
+                    }
+                    value = resolvePath(valStr) || value;
                   }
                   return originalSetAttribute.call(this, name, value);
                 };
@@ -287,8 +344,16 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               try {
                 const OriginalWorker = window.Worker;
                 window.Worker = function(scriptURL, options) {
-                  const resolved = resolvePath(scriptURL);
-                  return new OriginalWorker(resolved, options);
+                  let urlStr = '';
+                  if (typeof scriptURL === 'string') {
+                    urlStr = scriptURL;
+                  } else if (scriptURL instanceof URL) {
+                    urlStr = scriptURL.href;
+                  } else if (scriptURL && typeof scriptURL.toString === 'function') {
+                    urlStr = scriptURL.toString();
+                  }
+                  const resolved = resolvePath(urlStr);
+                  return new OriginalWorker(resolved || scriptURL, options);
                 };
                 window.Worker.prototype = OriginalWorker.prototype;
               } catch (e) {
@@ -312,8 +377,16 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                     const originalGet = desc.get;
                     Object.defineProperty(currentProto, prop, {
                       set: function(val) {
-                        const resolved = resolvePath(val);
-                        originalSet.call(this, resolved);
+                        let valStr = '';
+                        if (typeof val === 'string') {
+                          valStr = val;
+                        } else if (val instanceof URL) {
+                          valStr = val.href;
+                        } else if (val && typeof val.toString === 'function') {
+                          valStr = val.toString();
+                        }
+                        const resolved = resolvePath(valStr);
+                        originalSet.call(this, resolved || val);
                       },
                       get: function() {
                         return originalGet.call(this);
@@ -324,7 +397,15 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   } else {
                     Object.defineProperty(proto, prop, {
                       set: function(val) {
-                        this.setAttribute(prop, resolvePath(val));
+                        let valStr = '';
+                        if (typeof val === 'string') {
+                          valStr = val;
+                        } else if (val instanceof URL) {
+                          valStr = val.href;
+                        } else if (val && typeof val.toString === 'function') {
+                          valStr = val.toString();
+                        }
+                        this.setAttribute(prop, resolvePath(valStr) || val);
                       },
                       get: function() {
                         return this.getAttribute(prop);
