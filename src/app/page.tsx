@@ -54,7 +54,7 @@ export default function Home() {
       {isLoading && <LoadingScreen onComplete={() => setIsLoading(false)} />}
 
       {/* Plain dark background replacement for 3D world */}
-      <div className="fixed inset-0 bg-[#0a0a0a] -z-10" />
+      <div className="fixed inset-0 bg-[#08080c] -z-10" />
 
       {/* Main App Shell */}
       <div
