@@ -511,12 +511,30 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               margin: 0 !important;
               padding: 0 !important;
               overflow: hidden !important;
-              background-color: #000000 !important;
+              background-color: transparent !important;
             }
+            /* Make sure all body direct children/wrappers occupy full screen absolutely to prevent layout shrinking cycles */
+            body > * {
+              width: 100% !important;
+              height: 100% !important;
+              position: absolute !important;
+              top: 0 !important;
+              left: 0 !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              box-sizing: border-box !important;
+            }
+            /* Stretch canvas to fill the viewport completely while maintaining aspect ratio via object-fit */
             canvas {
               width: 100% !important;
               height: 100% !important;
-              display: block !important;
+              position: absolute !important;
+              top: 0 !important;
+              left: 0 !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              object-fit: contain !important;
+              box-sizing: border-box !important;
             }
           </style>
         `;
@@ -804,15 +822,15 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
       {/* Game Layout Block */}
       <div ref={containerRef} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* CENTER VIEWPORT (9 cols in LG) */}
-        <div className="lg:col-span-9 flex flex-col">
+        {/* CENTER VIEWPORT (10 cols in LG) */}
+        <div className="lg:col-span-10 flex flex-col">
           {/* Dedicated Player Frame wrapper - supports standard and fullscreen theater displays */}
           <div 
             ref={playerFrameRef}
             className={`relative w-full transition-all duration-500 overflow-hidden ${
               isFullscreen 
                 ? `fixed inset-0 z-50 flex flex-col items-center justify-center bg-black transition-all duration-300 ${
-                    isBarHidden ? "p-5" : "p-5 pb-24"
+                    isBarHidden ? "p-0" : "p-0 pb-[88px]"
                   }`
                 : "flex flex-col rounded-2xl border border-white/[0.08] bg-[#030303] shadow-[0_15px_40px_rgba(0,0,0,0.85)] z-20"
             }`}
@@ -820,8 +838,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             {/* Ambient Blurred Background backdrop (shown in fullscreen or portrait mode) */}
             {((isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait) || isFullscreen) && (
               <div 
-                className="absolute inset-0 bg-cover bg-center blur-[30px] opacity-40 scale-105 pointer-events-none transition-all duration-700 z-0"
-                style={{ backgroundImage: `url(${game.banner || game.thumbnail})` }}
+                className={`absolute inset-0 bg-cover bg-center ${game.portraitBackground ? 'blur-none opacity-100' : 'blur-[30px] opacity-40'} scale-105 pointer-events-none transition-all duration-700 z-0`}
+                style={{ backgroundImage: `url(${game.portraitBackground || game.banner || game.thumbnail})` }}
               >
                 {/* Cyberpunk Scanline overlay on bg */}
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[size:100%_4px] opacity-15" />
@@ -885,14 +903,14 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
             {/* Dynamic Iframe Viewport Frame */}
             <div 
-              className={`relative bg-black transition-[transform,box-shadow] duration-300 overflow-hidden z-10 ${
+              className={`relative overflow-hidden z-10 ${
                 isPortraitMode
                   ? isFullscreen 
-                    ? `h-full ${aspectClass} rounded-2xl border border-white/10 shadow-2xl my-auto` 
-                    : `w-[380px] sm:w-[420px] md:w-[460px] max-w-full ${aspectClass} mx-auto my-4 rounded-xl border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.8)]`
+                    ? `h-full ${aspectClass} mx-auto flex-shrink-0 bg-transparent` 
+                    : `w-[380px] sm:w-[420px] md:w-[460px] max-w-full ${aspectClass} mx-auto my-4 rounded-xl border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.8)] flex-shrink-0 bg-transparent`
                   : isFullscreen
-                    ? "h-full aspect-video rounded-2xl border border-white/10 shadow-2xl my-auto"
-                    : "w-full aspect-video"
+                    ? "w-full h-full flex-shrink-0 bg-black"
+                    : "w-full aspect-video flex-shrink-0 bg-black"
               }`}
             >
               {/* Screen static scanner overlay */}
@@ -1097,8 +1115,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           </div>
         </div>
 
-        {/* SIDE SUGGESTIONS BAR (3 cols in LG) */}
-        <div className="lg:col-span-3 flex flex-col h-full bg-[#07070c] border border-white/[0.08] rounded-2xl p-4 shadow-xl z-20">
+        {/* SIDE SUGGESTIONS BAR (2 cols in LG) */}
+        <div className="lg:col-span-2 flex flex-col h-full bg-[#07070c] border border-white/[0.08] rounded-2xl p-4 shadow-xl z-20">
           <div className="flex items-center gap-2 mb-4 pb-2 border-b border-white/[0.06]">
             <Gamepad className="w-4 h-4 text-electric-blue animate-pulse-subtle" />
             <h3 className="text-sm font-heading font-black tracking-wider uppercase text-white/90">
@@ -1106,7 +1124,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             </h3>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5 overflow-y-auto max-h-[620px] custom-scrollbar pr-1">
+          <div className="grid grid-cols-1 gap-2.5 overflow-y-auto max-h-[620px] custom-scrollbar pr-1">
             {suggestions.map((sug, idx) => (
               <div key={sug.id} onClick={() => onSelectGame(sug.id)} className="h-full flex">
                 <GameTile game={sug} index={idx} compact={true} />
