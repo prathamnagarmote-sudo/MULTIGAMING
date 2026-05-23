@@ -46,6 +46,7 @@ export interface GameData {
   // ZIP Game fields
   isZipGame?: boolean;
   zipSize?: string;
+  isPortrait?: boolean;
 }
 
 const STORAGE_KEY = "zylo_games_db";

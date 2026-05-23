@@ -16,7 +16,13 @@ import {
   Check,
   Gamepad,
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  EyeOff,
+  Heart,
+  MessageSquare,
+  Minimize2,
+  Smartphone,
+  ChevronUp
 } from "lucide-react";
 import JSZip from "jszip";
 import { GameData, getGamesDB, submitVoteDB, getGameZIP } from "@/utils/db";
@@ -31,12 +37,21 @@ interface GamePlayViewProps {
 export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const playerFrameRef = useRef<HTMLDivElement>(null);
 
   const [game, setGame] = useState<GameData | null>(null);
   const [suggestions, setSuggestions] = useState<GameData[]>([]);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [shareToast, setShareToast] = useState(false);
   const [activeFAQIndex, setActiveFAQIndex] = useState<number | null>(0);
+
+  // Cinematic Gameplay & Custom Toolbar States
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isBarHidden, setIsBarHidden] = useState(false);
+  const [isPortraitOverride, setIsPortraitOverride] = useState<boolean | null>(null);
+  const [showEscToast, setShowEscToast] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [showReportToast, setShowReportToast] = useState(false);
 
   // ZIP Game client runtime states
   const [zipIframeUrl, setZipIframeUrl] = useState<string | null>(null);
@@ -585,6 +600,36 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Handle browser fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!document.fullscreenElement;
+      setIsFullscreen(isCurrentlyFullscreen);
+      if (isCurrentlyFullscreen) {
+        setShowEscToast(true);
+        const timer = setTimeout(() => {
+          setShowEscToast(false);
+        }, 3000);
+        return () => clearTimeout(timer);
+      } else {
+        setShowEscToast(false);
+        setIsBarHidden(false); // Reset bar hidden state when exiting fullscreen
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("mozfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("MSFullscreenChange", handleFullscreenChange);
+    };
+  }, []);
+
   if (!game) return null;
 
   // Votes & ratings calculations
@@ -599,13 +644,49 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   };
 
   const handleFullscreen = () => {
-    if (iframeRef.current) {
-      if (iframeRef.current.requestFullscreen) {
-        iframeRef.current.requestFullscreen();
-      } else if ((iframeRef.current as any).webkitRequestFullscreen) {
-        (iframeRef.current as any).webkitRequestFullscreen();
-      } else if ((iframeRef.current as any).msRequestFullscreen) {
-        (iframeRef.current as any).msRequestFullscreen();
+    if (playerFrameRef.current) {
+      if (playerFrameRef.current.requestFullscreen) {
+        playerFrameRef.current.requestFullscreen();
+      } else if ((playerFrameRef.current as any).webkitRequestFullscreen) {
+        (playerFrameRef.current as any).webkitRequestFullscreen();
+      } else if ((playerFrameRef.current as any).msRequestFullscreen) {
+        (playerFrameRef.current as any).msRequestFullscreen();
+      }
+    }
+  };
+
+  const handleExitFullscreen = () => {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if ((document as any).webkitExitFullscreen) {
+      (document as any).webkitExitFullscreen();
+    } else if ((document as any).msExitFullscreen) {
+      (document as any).msExitFullscreen();
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (isFullscreen) {
+      handleExitFullscreen();
+    } else {
+      handleFullscreen();
+    }
+  };
+
+  const handleReport = () => {
+    setShowReportToast(true);
+    setTimeout(() => setShowReportToast(false), 3000);
+  };
+
+  const handleCommentClick = () => {
+    if (isFullscreen) {
+      alert("Real-time lobby chat & comment drawer is coming in the next update!");
+    } else {
+      const faqSection = document.getElementById("faq-section");
+      if (faqSection) {
+        faqSection.scrollIntoView({ behavior: "smooth" });
+      } else {
+        window.scrollTo({ top: document.body.scrollHeight - 500, behavior: "smooth" });
       }
     }
   };
@@ -633,6 +714,21 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           >
             <Check className="w-4 h-4 text-white" />
             <span className="text-sm font-bold tracking-wider">GAME LINK COPIED TO CLIPBOARD!</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Report Success Toast */}
+      <AnimatePresence>
+        {showReportToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-[#ff5e00] border border-white/20 shadow-[0_10px_30px_rgba(255,165,0,0.4)] flex items-center gap-2"
+          >
+            <AlertTriangle className="w-4 h-4 text-white" />
+            <span className="text-sm font-bold tracking-wider uppercase font-mono text-white">Issues reported to moderators!</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -677,115 +773,271 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
       <div ref={containerRef} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* CENTER VIEWPORT (8 cols in LG) */}
         <div className="lg:col-span-8 flex flex-col">
-          {/* High-End Iframe Viewport Frame */}
-          <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-white/[0.08] shadow-[0_15px_40px_rgba(0,0,0,0.8)] z-20 group">
-            {/* Screen static scanner overlay */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[size:100%_4px] opacity-10 pointer-events-none z-10" />
-
-            {zipLoading && (
-              <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center gap-4 z-30">
-                <div className="w-12 h-12 rounded-full border-2 border-t-electric-blue border-r-neon-purple border-b-white/10 border-l-white/10 animate-spin shadow-[0_0_15px_rgba(0,240,255,0.3)]" />
-                <div className="flex flex-col items-center gap-1">
-                  <span className="text-sm font-heading font-black tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-electric-blue to-neon-purple">
-                    Unpacking Game Resources
-                  </span>
-                  <span className="text-[10px] text-white/40 font-mono tracking-wider animate-pulse">
-                    Extracting virtual assets & initializing sandbox...
-                  </span>
-                </div>
+          {/* Dedicated Player Frame wrapper - supports standard and fullscreen theater displays */}
+          <div 
+            ref={playerFrameRef}
+            className={`relative w-full transition-all duration-500 overflow-hidden ${
+              isFullscreen 
+                ? "fixed inset-0 z-50 flex flex-col items-center justify-between p-5 bg-black" 
+                : "flex flex-col rounded-2xl border border-white/[0.08] bg-[#030303] shadow-[0_15px_40px_rgba(0,0,0,0.85)] z-20"
+            }`}
+          >
+            {/* Ambient Blurred Background backdrop (shown in fullscreen or portrait mode) */}
+            {((isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait) || isFullscreen) && (
+              <div 
+                className="absolute inset-0 bg-cover bg-center blur-[30px] opacity-40 scale-105 pointer-events-none transition-all duration-700 z-0"
+                style={{ backgroundImage: `url(${game.banner || game.thumbnail})` }}
+              >
+                {/* Cyberpunk Scanline overlay on bg */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[size:100%_4px] opacity-15" />
+                {/* Vignette wash */}
+                <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-black/80" />
               </div>
             )}
 
-            {zipError && (
-              <div className="absolute inset-0 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center gap-4 z-30 p-6 text-center">
-                <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-                  <AlertTriangle className="w-6 h-6" />
-                </div>
-                <div className="flex flex-col items-center gap-2 max-w-sm">
-                  <span className="text-sm font-heading font-black tracking-widest uppercase text-red-400">
-                    Failed to Load Game
-                  </span>
-                  <span className="text-xs text-white/50 leading-relaxed font-mono">
-                    {zipError}
-                  </span>
-                </div>
+            {/* Transient ESC notifications inside Fullscreen container */}
+            <AnimatePresence>
+              {showEscToast && isFullscreen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -50, x: "-50%" }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="fixed top-6 left-1/2 z-[100] px-5 py-3 rounded-full bg-black/80 backdrop-blur-md border border-white/10 text-white/80 text-xs font-bold font-mono tracking-widest shadow-xl flex items-center gap-2"
+                >
+                  <span>Press</span>
+                  <span className="px-2 py-1 rounded bg-white/20 text-white font-black text-[10px] border border-white/10 shadow-inner">ESC</span>
+                  <span>to exit full screen</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Hover show bar sensor / Chevron handle when bar is hidden in fullscreen */}
+            {isFullscreen && isBarHidden && (
+              <div 
+                onMouseEnter={() => setIsBarHidden(false)}
+                className="fixed bottom-0 left-0 right-0 h-8 z-[60] flex items-center justify-center cursor-pointer group"
+              >
+                <button 
+                  onClick={() => setIsBarHidden(false)}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-t-lg bg-[#07070a] border border-white/10 border-b-0 text-white/40 group-hover:text-white/80 transition-all shadow-[0_-5px_15px_rgba(0,0,0,0.5)] text-[9px] uppercase tracking-widest font-black font-mono"
+                >
+                  <ChevronUp className="w-3.5 h-3.5 animate-bounce" />
+                  Show bar
+                </button>
               </div>
             )}
 
-            {(!game.isZipGame || zipIframeUrl) && (
-              <iframe
-                ref={iframeRef}
-                src={game.isZipGame ? zipIframeUrl! : game.iframeUrl}
-                className="w-full h-full border-none relative z-0"
-                allow="autoplay; fullscreen; keyboard"
-                title={game.title}
-              />
-            )}
-          </div>
+            {/* Dynamic Iframe Viewport Frame */}
+            <div 
+              className={`relative bg-black transition-all duration-500 overflow-hidden z-10 ${
+                (isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait)
+                  ? isFullscreen 
+                    ? "h-[calc(100vh-125px)] aspect-[9/16] rounded-2xl border border-white/10 shadow-2xl my-auto" 
+                    : "aspect-[9/16] h-[640px] max-h-[70vh] max-w-full mx-auto my-4 rounded-xl border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.8)]"
+                  : isFullscreen
+                    ? "h-[calc(100vh-125px)] aspect-video rounded-2xl border border-white/10 shadow-2xl my-auto"
+                    : "w-full aspect-video"
+              }`}
+            >
+              {/* Screen static scanner overlay */}
+              <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[size:100%_4px] opacity-10 pointer-events-none z-10" />
 
-          {/* Action Toolbar directly under Frame */}
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl bg-[#07070a] border border-white/[0.05] relative z-20">
-            {/* Left toolbar: Title & rating percentage */}
-            <div className="flex items-center gap-4">
-              <div className="flex flex-col">
-                <h1 className="text-xl font-heading font-black text-white uppercase italic tracking-wider leading-none">
-                  {game.title}
-                </h1>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <span className="text-xs font-semibold text-white/40 font-mono">{game.developer}</span>
-                  <span className="text-xs text-white/20">•</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    <span className="text-xs font-bold text-emerald-400 font-mono">{ratingPercentage}% Rating</span>
+              {zipLoading && (
+                <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center gap-4 z-30">
+                  <div className="w-12 h-12 rounded-full border-2 border-t-electric-blue border-r-neon-purple border-b-white/10 border-l-white/10 animate-spin shadow-[0_0_15px_rgba(0,240,255,0.3)]" />
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-sm font-heading font-black tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-electric-blue to-neon-purple">
+                      Unpacking Game Resources
+                    </span>
+                    <span className="text-[10px] text-white/40 font-mono tracking-wider animate-pulse">
+                      Extracting virtual assets & initializing sandbox...
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {zipError && (
+                <div className="absolute inset-0 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center gap-4 z-30 p-6 text-center">
+                  <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                    <AlertTriangle className="w-6 h-6" />
+                  </div>
+                  <div className="flex flex-col items-center gap-2 max-w-sm">
+                    <span className="text-sm font-heading font-black tracking-widest uppercase text-red-400">
+                      Failed to Load Game
+                    </span>
+                    <span className="text-xs text-white/50 leading-relaxed font-mono">
+                      {zipError}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {(!game.isZipGame || zipIframeUrl) && (
+                <iframe
+                  ref={iframeRef}
+                  src={game.isZipGame ? zipIframeUrl! : game.iframeUrl}
+                  className="w-full h-full border-none relative z-0"
+                  allow="autoplay; fullscreen; keyboard"
+                  title={game.title}
+                />
+              )}
+            </div>
+
+            {/* Premium Action Control Toolbar */}
+            <div 
+              className={`flex flex-wrap items-center justify-between gap-4 p-4 transition-all duration-500 z-30 ${
+                isFullscreen 
+                  ? `w-full max-w-5xl rounded-2xl bg-[#07070a]/90 backdrop-blur-xl border border-white/[0.08] shadow-[0_-10px_35px_rgba(0,0,0,0.6)] ${
+                      isBarHidden ? "translate-y-28 opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+                    }`
+                  : "w-full border-t border-white/[0.05] bg-[#07070a]/60 backdrop-blur-md"
+              }`}
+            >
+              {/* Left toolbar details */}
+              <div className="flex items-center gap-3 select-none">
+                {isFullscreen && (
+                  <img 
+                    src={game.thumbnail} 
+                    alt="" 
+                    className="w-10 h-10 rounded-lg object-cover border border-white/10 shrink-0 shadow-md animate-pulse-subtle"
+                  />
+                )}
+                <div className="flex flex-col">
+                  <h2 className="text-base md:text-lg font-heading font-black text-white uppercase italic tracking-wider leading-none flex items-center gap-2">
+                    {game.title}
+                    {isFullscreen && (
+                      <span className="text-[9px] font-extrabold uppercase tracking-widest bg-white/10 text-white/70 px-1.5 py-0.5 rounded font-mono">
+                        LIVE
+                      </span>
+                    )}
+                  </h2>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className="text-[10px] font-semibold text-white/40 font-mono">{game.developer}</span>
+                    <span className="text-[10px] text-white/20">•</span>
+                    <div className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-[10px] font-bold text-emerald-400 font-mono">{ratingPercentage}% Rating</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Right toolbar: Toolbar feedback actions */}
-            <div className="flex items-center gap-2">
-              {/* Like / Dislike Button Groups */}
-              <div className="flex items-center rounded-lg bg-white/[0.04] p-0.5 border border-white/[0.06]">
-                <button
-                  onClick={() => handleVote("like")}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition-all text-xs font-semibold ${game.userVote === "like"
-                      ? "bg-emerald-500/20 text-emerald-400 shadow-inner"
-                      : "text-white/40 hover:text-white/80 hover:bg-white/[0.03]"
+              {/* Middle: 'Hide this bar' Button (fullscreen only) */}
+              {isFullscreen && (
+                <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center">
+                  <button
+                    onClick={() => setIsBarHidden(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.08] hover:border-white/20 transition-all text-[11px] font-bold uppercase tracking-wider cursor-pointer shadow-lg group font-mono"
+                  >
+                    <EyeOff className="w-3.5 h-3.5 group-hover:scale-105 transition-transform" />
+                    Hide this bar
+                  </button>
+                </div>
+              )}
+
+              {/* Right toolbar actions */}
+              <div className="flex items-center gap-2">
+                {/* Like / Dislike Button Groups */}
+                <div className="flex items-center rounded-lg bg-white/[0.03] p-0.5 border border-white/[0.06]">
+                  <button
+                    onClick={() => handleVote("like")}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md transition-all text-xs font-bold cursor-pointer ${
+                      game.userVote === "like"
+                        ? "bg-emerald-500/20 text-emerald-400 shadow-inner animate-pulse-subtle"
+                        : "text-white/40 hover:text-white/80 hover:bg-white/[0.02]"
                     }`}
+                    title="Like this game"
+                  >
+                    <ThumbsUp className="w-3.5 h-3.5" />
+                    <span className="font-mono">{game.likes}</span>
+                  </button>
+                  <div className="w-[1px] h-3.5 bg-white/10" />
+                  <button
+                    onClick={() => handleVote("dislike")}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md transition-all text-xs font-bold cursor-pointer ${
+                      game.userVote === "dislike"
+                        ? "bg-red-500/20 text-red-400 shadow-inner animate-pulse-subtle"
+                        : "text-white/40 hover:text-white/80 hover:bg-white/[0.02]"
+                    }`}
+                    title="Dislike this game"
+                  >
+                    <ThumbsDown className="w-3.5 h-3.5" />
+                    <span className="font-mono">{game.dislikes}</span>
+                  </button>
+                </div>
+
+                {/* Favorite Heart Toggle */}
+                <button
+                  onClick={() => setIsFavorited(!isFavorited)}
+                  className={`p-2.5 rounded-lg border transition-all cursor-pointer ${
+                    isFavorited
+                      ? "bg-red-500/20 border-red-500/30 text-red-400 shadow-[0_0_12px_rgba(239,68,68,0.2)] animate-pulse-subtle"
+                      : "bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06]"
+                  }`}
+                  title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
                 >
-                  <ThumbsUp className="w-3.5 h-3.5" />
-                  <span className="font-mono">{game.likes}</span>
+                  <Heart className={`w-3.5 h-3.5 transition-transform ${isFavorited ? "fill-red-400 text-red-400 scale-105" : ""}`} />
                 </button>
-                <div className="w-[1px] h-4 bg-white/10" />
+
+                {/* Report alert trigger */}
                 <button
-                  onClick={() => handleVote("dislike")}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition-all text-xs font-semibold ${game.userVote === "dislike"
-                      ? "bg-red-500/20 text-red-400 shadow-inner"
-                      : "text-white/40 hover:text-white/80 hover:bg-white/[0.03]"
-                    }`}
+                  onClick={handleReport}
+                  className={`p-2.5 rounded-lg border transition-all cursor-pointer ${
+                    showReportToast
+                      ? "bg-amber-500/20 border-amber-500/30 text-amber-400 animate-pulse"
+                      : "bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06]"
+                  }`}
+                  title="Report issues/bugs"
                 >
-                  <ThumbsDown className="w-3.5 h-3.5" />
-                  <span className="font-mono">{game.dislikes}</span>
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                </button>
+
+                {/* FAQ Comment Drawer scroll trigger */}
+                <button
+                  onClick={handleCommentClick}
+                  className="p-2.5 rounded-lg bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
+                  title="View Comments & FAQs"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Share Trigger */}
+                <button
+                  onClick={handleShare}
+                  className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06] transition-all text-xs font-bold cursor-pointer font-sans"
+                  title="Copy Share Link"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline font-sans">Share</span>
+                </button>
+
+                {/* Rotation/Device Layout Toggle */}
+                <button
+                  onClick={() => setIsPortraitOverride(isPortraitOverride === null ? !(isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait) : !isPortraitOverride)}
+                  className={`p-2.5 rounded-lg border transition-all cursor-pointer ${
+                    (isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait)
+                      ? "bg-neon-purple/20 border-neon-purple/30 text-neon-purple shadow-[0_0_12px_rgba(0,255,102,0.2)]" 
+                      : "bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06]"
+                  }`}
+                  title="Rotate Device Orientation"
+                >
+                  <Smartphone className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Fullscreen Toggle */}
+                <button
+                  onClick={toggleFullscreen}
+                  className={`p-2.5 rounded-lg border transition-all cursor-pointer ${
+                    isFullscreen 
+                      ? "bg-electric-blue/20 border-electric-blue/30 text-electric-blue shadow-[0_0_12px_rgba(255,0,85,0.2)]"
+                      : "bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06]"
+                  }`}
+                  title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Mode"}
+                >
+                  {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
                 </button>
               </div>
-
-              {/* Share Trigger */}
-              <button
-                onClick={handleShare}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-white/40 hover:text-white/80 hover:bg-white/[0.08] transition-all text-xs font-bold tracking-wide"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                Share
-              </button>
-
-              {/* Fullscreen Trigger */}
-              <button
-                onClick={handleFullscreen}
-                className="p-2.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-white/40 hover:text-white/80 hover:bg-white/[0.08] transition-all"
-                title="Fullscreen Mode"
-              >
-                <Maximize2 className="w-3.5 h-3.5" />
-              </button>
             </div>
           </div>
         </div>
@@ -897,7 +1149,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
           {/* Segment 3: Accordion FAQs */}
           {game.faqs && game.faqs.length > 0 && (
-            <section className="p-6 rounded-2xl bg-[#07070a]/60 border border-white/[0.04] backdrop-blur-xl">
+            <section id="faq-section" className="p-6 rounded-2xl bg-[#07070a]/60 border border-white/[0.04] backdrop-blur-xl">
               <h2 className="text-lg font-heading font-black tracking-wider uppercase mb-5 text-transparent bg-clip-text bg-gradient-to-r from-[#ff9f0a] to-[#ff5e00]">
                 Frequently Asked Questions
               </h2>

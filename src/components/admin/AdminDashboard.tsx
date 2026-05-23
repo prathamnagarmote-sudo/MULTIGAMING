@@ -16,7 +16,9 @@ import {
   Layers,
   X,
   UploadCloud,
-  FileArchive
+  FileArchive,
+  Smartphone,
+  Laptop
 } from "lucide-react";
 import {
   GameData,
@@ -54,6 +56,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
   const [isNew, setIsNew] = useState(false);
   const [isHot, setIsHot] = useState(false);
   const [plays, setPlays] = useState("100K");
+  const [isPortrait, setIsPortrait] = useState(false);
 
   // ZIP Upload States
   const [isZipGame, setIsZipGame] = useState(false);
@@ -139,6 +142,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
     setIsNew(!!game.isNew);
     setIsHot(!!game.isHot);
     setPlays(game.plays || "100K");
+    setIsPortrait(!!game.isPortrait);
     setFaqs(game.faqs || []);
     setGameplayVideos(game.gameplayVideos || []);
     
@@ -163,6 +167,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
     setIsNew(false);
     setIsHot(false);
     setPlays("100K");
+    setIsPortrait(false);
     setFaqs([{ question: "Is this game free to play?", answer: "Yes, it is 100% free." }]);
     setGameplayVideos([{ title: "Official Walkthrough", videoUrl: "https://www.youtube.com/embed/n305c4xQ27Y" }]);
     setErrorMessage(null);
@@ -209,6 +214,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
       isNew,
       isHot,
       plays,
+      isPortrait,
       faqs,
       gameplayVideos,
       rating: editingGame ? editingGame.rating : 5.0,
@@ -672,6 +678,37 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
                     onChange={(e) => setButtonGradient(e.target.value)}
                     className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40 font-mono"
                   />
+                </div>
+              </div>
+
+              {/* Game Orientation Picker */}
+              <div className="flex flex-col gap-2 mt-1 pb-3 border-b border-white/[0.04]">
+                <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Game Display Orientation</label>
+                <div className="flex bg-white/[0.02] border border-white/[0.06] rounded-xl p-1 gap-1 w-fit">
+                  <button
+                    type="button"
+                    onClick={() => setIsPortrait(false)}
+                    className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer ${
+                      !isPortrait
+                        ? "bg-electric-blue text-white shadow-[0_0_12px_rgba(255,0,85,0.25)]"
+                        : "text-white/40 hover:text-white/70"
+                    }`}
+                  >
+                    <Laptop className="w-3.5 h-3.5" />
+                    Landscape (16:9)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsPortrait(true)}
+                    className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer ${
+                      isPortrait
+                        ? "bg-neon-purple text-white shadow-[0_0_12px_rgba(0,255,102,0.25)]"
+                        : "text-white/40 hover:text-white/70"
+                    }`}
+                  >
+                    <Smartphone className="w-3.5 h-3.5" />
+                    Portrait (9:16)
+                  </button>
                 </div>
               </div>
 
