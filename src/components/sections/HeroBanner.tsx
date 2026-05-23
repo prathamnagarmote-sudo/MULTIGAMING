@@ -88,14 +88,13 @@ export function HeroBanner({ onPlayGame, onExploreCategory }: HeroBannerProps) {
             <img
               src={activeSlide.url}
               alt={activeSlide.title}
-              className="w-full h-full object-cover brightness-[0.75] contrast-[1.05] saturation-[1.15]"
+              className="w-full h-full object-cover brightness-[1.05] contrast-[1.02] saturation-[1.1]"
             />
           </motion.div>
         </AnimatePresence>
 
-        {/* Ambient Shading Vignettes */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-black/10 to-[#0a0a0f]/40 z-10 pointer-events-none" />
-        <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors duration-300 z-10 pointer-events-none" />
+        {/* Ambient Shading Vignettes (Bottom-only for caption legibility, top and center remain fully bright) */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10 pointer-events-none" />
 
         {/* Glassmorphic Minimal Brand Tagline overlay (Top-Left) */}
         <div className="absolute top-5 left-5 z-20 pointer-events-none select-none">

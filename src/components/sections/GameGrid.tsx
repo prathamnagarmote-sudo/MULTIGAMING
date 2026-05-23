@@ -22,11 +22,11 @@ export function GameGrid({ title, subtitle, games, icon, showViewAll = true, onS
           {icon && <span className="text-2xl">{icon}</span>}
           <div>
             <h2 className="text-xl font-bold text-white">{title}</h2>
-            {subtitle && <p className="text-sm text-white/40 mt-0.5">{subtitle}</p>}
+            {subtitle && <p className="text-sm text-white/70 mt-0.5">{subtitle}</p>}
           </div>
         </div>
         {showViewAll && (
-          <button className="flex items-center gap-1 text-sm font-medium text-white/40 hover:text-electric-blue transition-colors group">
+          <button className="flex items-center gap-1 text-sm font-medium text-white/70 hover:text-electric-blue transition-colors group">
             View All
             <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
           </button>
