@@ -58,6 +58,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const [zipIframeUrl, setZipIframeUrl] = useState<string | null>(null);
   const [zipLoading, setZipLoading] = useState(false);
   const [zipError, setZipError] = useState<string | null>(null);
+  
+  // Iframe load state
+  const [isIframeLoaded, setIsIframeLoaded] = useState(false);
   const objectUrlsRef = useRef<string[]>([]);
 
   // Sync / load active game & recommendations
@@ -664,6 +667,19 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     };
   }, []);
 
+  // Handle Escape key for CSS fallback fullscreen
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isFullscreen) {
+        setIsFullscreen(false);
+        setIsBarHidden(false);
+        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isFullscreen]);
+
   if (!game) return null;
 
   // Votes & ratings calculations
@@ -920,11 +936,23 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 </div>
               )}
 
+              {/* Iframe Loading Overlay */}
+              {!isIframeLoaded && !zipLoading && !zipError && (
+                <div className="absolute inset-0 bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center gap-4 z-20 transition-opacity duration-500">
+                  <div className="w-16 h-16 rounded-3xl border-2 border-t-electric-blue border-r-neon-purple border-b-transparent border-l-transparent animate-spin shadow-[0_0_20px_rgba(99,102,241,0.2)]" />
+                  <span className="text-xs font-heading font-black tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50 animate-pulse">
+                    Connecting to Server...
+                  </span>
+                </div>
+              )}
+
               {(!game.isZipGame || zipIframeUrl) && (
                 <iframe
                   ref={iframeRef}
                   src={game.isZipGame ? zipIframeUrl! : game.iframeUrl}
-                  className="w-full h-full border-none relative z-0"
+                  onLoad={() => setIsIframeLoaded(true)}
+                  className="w-full h-full border-none relative z-0 transition-opacity duration-700 ease-in-out"
+                  style={{ opacity: isIframeLoaded ? 1 : 0 }}
                   allow="autoplay; fullscreen; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
                   allowFullScreen
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-top-navigation-by-user-activation allow-downloads"
@@ -975,7 +1003,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
               {/* Middle: 'Hide this bar' Button (fullscreen only) */}
               {isFullscreen && (
-                <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center">
+                <div className="flex-1 hidden md:flex items-center justify-center">
                   <button
                     onClick={() => setIsBarHidden(true)}
                     className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.08] hover:border-white/20 transition-all text-[11px] font-bold uppercase tracking-wider cursor-pointer shadow-lg group font-mono"
