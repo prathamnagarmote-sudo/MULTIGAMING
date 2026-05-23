@@ -678,32 +678,27 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   };
 
   const handleFullscreen = () => {
-    if (playerFrameRef.current) {
-      if (playerFrameRef.current.requestFullscreen) {
-        playerFrameRef.current.requestFullscreen();
-      } else if ((playerFrameRef.current as any).webkitRequestFullscreen) {
-        (playerFrameRef.current as any).webkitRequestFullscreen();
-      } else if ((playerFrameRef.current as any).msRequestFullscreen) {
-        (playerFrameRef.current as any).msRequestFullscreen();
-      }
+    const el = playerFrameRef.current as any;
+    if (el) {
+      if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      else if (el.msRequestFullscreen) el.msRequestFullscreen();
     }
   };
 
   const handleExitFullscreen = () => {
-    if (document.exitFullscreen) {
-      document.exitFullscreen();
-    } else if ((document as any).webkitExitFullscreen) {
-      (document as any).webkitExitFullscreen();
-    } else if ((document as any).msExitFullscreen) {
-      (document as any).msExitFullscreen();
-    }
+    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
+    else if ((document as any).msExitFullscreen) (document as any).msExitFullscreen();
   };
 
   const toggleFullscreen = () => {
     if (isFullscreen) {
       handleExitFullscreen();
+      setIsFullscreen(false); // Force state change for CSS fallback
     } else {
       handleFullscreen();
+      setIsFullscreen(true); // Force state change for CSS fallback
     }
   };
 
@@ -1025,7 +1020,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 {/* Favorite Heart Toggle */}
                 <button
                   onClick={() => setIsFavorited(!isFavorited)}
-                  className={`p-2.5 rounded-lg border transition-all cursor-pointer ${
+                  className={`hidden sm:flex p-2.5 rounded-lg border transition-all cursor-pointer ${
                     isFavorited
                       ? "bg-red-500/20 border-red-500/30 text-red-400 shadow-[0_0_12px_rgba(239,68,68,0.2)] animate-pulse-subtle"
                       : "bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06]"
@@ -1038,7 +1033,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 {/* Report alert trigger */}
                 <button
                   onClick={handleReport}
-                  className={`p-2.5 rounded-lg border transition-all cursor-pointer ${
+                  className={`hidden sm:flex p-2.5 rounded-lg border transition-all cursor-pointer ${
                     showReportToast
                       ? "bg-amber-500/20 border-amber-500/30 text-amber-400 animate-pulse"
                       : "bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06]"
@@ -1051,7 +1046,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 {/* FAQ Comment Drawer scroll trigger */}
                 <button
                   onClick={handleCommentClick}
-                  className="p-2.5 rounded-lg bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
+                  className="hidden sm:flex p-2.5 rounded-lg bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06] transition-all cursor-pointer"
                   title="View Comments & FAQs"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
@@ -1060,7 +1055,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 {/* Share Trigger */}
                 <button
                   onClick={handleShare}
-                  className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06] transition-all text-xs font-bold cursor-pointer font-sans"
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06] transition-all text-xs font-bold cursor-pointer font-sans"
                   title="Copy Share Link"
                 >
                   <Share2 className="w-3.5 h-3.5" />
