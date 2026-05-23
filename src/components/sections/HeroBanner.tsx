@@ -105,7 +105,7 @@ export function HeroBanner({ onPlayGame, onExploreCategory }: HeroBannerProps) {
         </div>
 
         {/* Bottom Banner Glassmorphic Label & Explore Button */}
-        <div className="absolute bottom-6 left-6 z-20 flex flex-col md:flex-row md:items-end justify-between right-6 pointer-events-none gap-4">
+        <div className="absolute bottom-6 left-6 right-6 z-20 flex flex-col md:flex-row md:items-end justify-between pointer-events-none gap-4">
           <div className="flex flex-col gap-1 select-none">
             <span className="text-[9px] font-bold tracking-[0.3em] text-electric-blue font-mono uppercase">
               {activeSlide.subtitle}
@@ -142,8 +142,8 @@ export function HeroBanner({ onPlayGame, onExploreCategory }: HeroBannerProps) {
           </button>
         </div>
 
-        {/* Glowy Dash Progress Indicators (Bottom Right) */}
-        <div className="absolute bottom-6 right-6 z-20 flex gap-2">
+        {/* Glowy Dash Progress Indicators (Bottom Center) */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
           {VIBRANT_BG_IMAGES.map((_, idx) => {
             const isActive = idx === activeIdx;
             return (
