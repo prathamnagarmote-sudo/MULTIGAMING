@@ -2,184 +2,155 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Trophy } from "lucide-react";
-import { GameData, getGamesDB } from "@/utils/db";
+import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 
 interface HeroBannerProps {
-  onPlayGame: (id: string) => void;
+  onPlayGame?: (id: string) => void;
 }
 
+const VIBRANT_BG_IMAGES = [
+  {
+    url: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1920&auto=format&fit=crop",
+    title: "UPGRADE YOUR EXPERIENCE",
+    subtitle: "ARCADE LOBBY"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1614294148960-9aa740632a87?q=80&w=1920&auto=format&fit=crop",
+    title: "NEON FUTURISTIC CONSOLE",
+    subtitle: "NEXT-GEN GAMING"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1920&auto=format&fit=crop",
+    title: "CYBERNETIC TECH CENTRAL",
+    subtitle: "VIBRANT GEAR"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1920&auto=format&fit=crop",
+    title: "COMMAND THE ARENA",
+    subtitle: "IMMERSE YOURSELF"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=1920&auto=format&fit=crop",
+    title: "VIBRANT NEON ARCADE",
+    subtitle: "PLAY ANYTHING"
+  }
+];
+
 export function HeroBanner({ onPlayGame }: HeroBannerProps) {
-  const [slideGames, setSlideGames] = useState<GameData[]>([]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
-  // Load dynamically on mount
+  // Auto-play sliding functionality (cross-fades every 5 seconds)
   useEffect(() => {
-    const all = getGamesDB();
-    const heroes = all.filter((g) => g.isHero);
-    if (heroes.length > 0) {
-      setSlideGames(heroes.slice(0, 4));
-    } else {
-      // fallback default top 4
-      setSlideGames(all.slice(0, 4));
-    }
-  }, []);
-
-  // Auto-play sliding functionality
-  useEffect(() => {
-    if (isHovered || slideGames.length === 0) return;
+    if (isHovered) return;
     const interval = setInterval(() => {
-      setActiveIdx((prev) => (prev + 1) % slideGames.length);
-    }, 6000);
+      setActiveIdx((prev) => (prev + 1) % VIBRANT_BG_IMAGES.length);
+    }, 5000);
     return () => clearInterval(interval);
-  }, [isHovered, slideGames]);
+  }, [isHovered]);
 
-  if (slideGames.length === 0) {
-    return (
-      <div className="h-[360px] md:h-[480px] rounded-2xl bg-white/[0.01] border border-white/[0.04] flex items-center justify-center text-white/20 text-xs font-mono mb-8">
-        Loading Featured Arena...
-      </div>
-    );
-  }
+  const handleNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveIdx((prev) => (prev + 1) % VIBRANT_BG_IMAGES.length);
+  };
 
-  const activeGame = slideGames[activeIdx];
+  const handlePrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveIdx((prev) => (prev - 1 + VIBRANT_BG_IMAGES.length) % VIBRANT_BG_IMAGES.length);
+  };
+
+  const activeSlide = VIBRANT_BG_IMAGES[activeIdx];
 
   return (
     <div className="mb-8">
-      {/* Main Sliding Windows Dashboard */}
+      {/* 100% Full-Width Aesthetic Sliding Arena */}
       <section
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="relative -mx-6 h-[360px] md:h-[480px] overflow-hidden border border-white/[0.08] bg-[#030303] shadow-[0_20px_50px_rgba(0,0,0,0.65)] rounded-2xl flex flex-row select-none"
+        className="relative -mx-6 h-[360px] md:h-[480px] overflow-hidden border border-white/[0.08] bg-[#030303] shadow-[0_20px_50px_rgba(0,0,0,0.65)] rounded-2xl select-none group"
       >
-        {/* LEFT VIEW: Active Featured Game Banner (80%) */}
-        <div className="relative flex-1 h-full overflow-hidden w-[75%] md:w-[80%] bg-black">
-          {/* Spatial Cyber Grid Mesh Background */}
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:40px_40px] z-10 pointer-events-none" />
+        {/* Spatial Cyber Grid Mesh Background */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:40px_40px] z-10 pointer-events-none" />
 
-          {/* Animate slide background replacement */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeGame.id}
-              initial={{ opacity: 0, scale: 1.02 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5, ease: "easeInOut" }}
-              className="absolute inset-0 w-full h-full"
-            >
-              <img
-                src={activeGame.banner || activeGame.thumbnail}
-                alt={activeGame.title}
-                className="w-full h-full object-cover brightness-[0.6] contrast-[1.05] saturation-[1.1]"
-              />
-            </motion.div>
-          </AnimatePresence>
+        {/* Cyberpunk Scanline Scan Overlay */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.12)_50%)] bg-[size:100%_4px] opacity-15 pointer-events-none z-10" />
 
-          {/* Clean Overlay Shadows for content text contrast */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#030303]/95 via-transparent to-transparent z-10 pointer-events-none" />
-          <div className="absolute inset-y-0 left-0 w-2/3 bg-gradient-to-r from-black/60 to-transparent z-10 pointer-events-none" />
+        {/* Animate slide background replacement */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeIdx}
+            initial={{ opacity: 0, scale: 1.03 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}
+            className="absolute inset-0 w-full h-full"
+          >
+            <img
+              src={activeSlide.url}
+              alt={activeSlide.title}
+              className="w-full h-full object-cover brightness-[0.75] contrast-[1.05] saturation-[1.15]"
+            />
+          </motion.div>
+        </AnimatePresence>
 
-          {/* Tagline Badge (Top Left of Active Display) */}
-          <div className="absolute top-5 left-5 z-20">
-            <span className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-widest bg-black/50 text-white border border-white/10 rounded-lg backdrop-blur-md">
-              <Trophy size={11} className="text-amber-400" /> Featured Game
-            </span>
-          </div>
+        {/* Ambient Shading Vignettes */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-black/10 to-[#0a0a0f]/40 z-10 pointer-events-none" />
+        <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors duration-300 z-10 pointer-events-none" />
 
-          {/* Dynamic Details Overlay (Bottom Left & Right) */}
-          <div className="absolute bottom-6 left-6 right-6 md:bottom-8 md:left-8 md:right-8 z-20 flex flex-col md:flex-row md:items-end justify-between gap-4 pointer-events-none">
-            {/* Metadata Text */}
-            <div className="flex items-center gap-4">
-              <img
-                src={activeGame.thumbnail}
-                alt={`${activeGame.title} Icon`}
-                className="w-14 h-14 rounded-2xl object-cover border border-white/20 shadow-[0_8px_16px_rgba(0,0,0,0.6)] shrink-0"
-              />
-              <div className="flex flex-col">
-                <span className="text-[9px] font-extrabold uppercase tracking-[0.25em] text-white/50 font-mono">
-                  {activeGame.genre}
-                </span>
-                <h2 className="text-2xl md:text-4xl font-heading font-black text-white uppercase italic tracking-tighter drop-shadow-md leading-none mb-1">
-                  {activeGame.title}
-                </h2>
-                <p className="hidden md:block text-xs text-white/55 max-w-md leading-relaxed">
-                  {activeGame.description}
-                </p>
-              </div>
-            </div>
-
-            {/* Glowing Orange/Vibrant Play Button (Bottom Right) */}
-            <div className="pointer-events-auto shrink-0">
-              <button
-                onClick={() => onPlayGame(activeGame.id)}
-                className={`group flex items-center gap-2.5 px-8 py-4 rounded-xl bg-gradient-to-r ${
-                  activeGame.buttonGradient || "from-[#ff9f0a] to-[#ff5e00]"
-                } text-white font-heading font-black text-xs uppercase tracking-widest hover:brightness-110 hover:scale-[1.03] shadow-[0_0_20px_rgba(255,159,10,0.3)] transition-all duration-300 cursor-pointer`}
-              >
-                <Play size={12} className="fill-white text-white" />
-                Play Now
-              </button>
-            </div>
-          </div>
+        {/* Glassmorphic Minimal Brand Tagline overlay (Top-Left) */}
+        <div className="absolute top-5 left-5 z-20 pointer-events-none select-none">
+          <span className="flex items-center gap-2 px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-widest bg-black/60 text-white border border-white/10 rounded-lg backdrop-blur-md">
+            <Sparkles size={11} className="text-electric-blue animate-pulse" />
+            ZYLO ARCADE CHAMPIONSHIP
+          </span>
         </div>
 
-        {/* RIGHT VIEW: Dynamic Game Selector Tabs (20%) */}
-        <div className="w-[25%] md:w-[20%] h-full flex flex-col border-l border-white/[0.08] bg-[#070707] z-20">
-          {slideGames.map((game, idx) => {
+        {/* Bottom Banner Glassmorphic Label (Sleek, minimal aesthetic) */}
+        <div className="absolute bottom-6 left-6 z-20 pointer-events-none select-none flex flex-col gap-1">
+          <span className="text-[9px] font-extrabold tracking-[0.3em] text-electric-blue font-mono">
+            {activeSlide.subtitle}
+          </span>
+          <h2 className="text-xl md:text-3xl font-heading font-black text-white uppercase italic tracking-wider drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]">
+            {activeSlide.title}
+          </h2>
+        </div>
+
+        {/* Arrow Navigation (Fades in dynamically on hover) */}
+        <div className="absolute inset-y-0 left-4 right-4 flex items-center justify-between z-20 pointer-events-none">
+          <button
+            onClick={handlePrev}
+            className="pointer-events-auto w-11 h-11 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center text-white/50 hover:text-electric-blue hover:bg-black/80 hover:border-electric-blue/50 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg backdrop-blur-md cursor-pointer hover:scale-105"
+            title="Previous Background"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <button
+            onClick={handleNext}
+            className="pointer-events-auto w-11 h-11 rounded-xl bg-black/60 border border-white/10 flex items-center justify-center text-white/50 hover:text-electric-blue hover:bg-black/80 hover:border-electric-blue/50 opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-lg backdrop-blur-md cursor-pointer hover:scale-105"
+            title="Next Background"
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
+
+        {/* Glowy Dash Progress Indicators (Bottom Right) */}
+        <div className="absolute bottom-6 right-6 z-20 flex gap-2">
+          {VIBRANT_BG_IMAGES.map((_, idx) => {
             const isActive = idx === activeIdx;
             return (
               <button
-                key={game.id}
-                onClick={() => setActiveIdx(idx)}
-                className={`w-full h-1/4 relative overflow-hidden flex flex-col justify-end p-3 border-b border-white/[0.05] last:border-b-0 transition-all duration-300 text-left cursor-pointer group ${
-                  isActive ? "bg-white/[0.03]" : "hover:bg-white/[0.01]"
+                key={idx}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveIdx(idx);
+                }}
+                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                  isActive 
+                    ? "w-8 bg-electric-blue shadow-[0_0_10px_#00f0ff]" 
+                    : "w-2 bg-white/20 hover:bg-white/40"
                 }`}
-              >
-                {/* Thumbnail Background */}
-                <img
-                  src={game.banner || game.thumbnail}
-                  alt={game.title}
-                  className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${
-                    isActive
-                      ? "brightness-[0.4] scale-105"
-                      : "brightness-[0.18] grayscale opacity-40 group-hover:brightness-[0.28] group-hover:grayscale-[50%] group-hover:opacity-70"
-                  }`}
-                />
-
-                {/* Cyberpunk Scanner Overlay */}
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.15)_50%)] bg-[size:100%_4px] opacity-20 pointer-events-none z-10" />
-
-                {/* Glowing Outline highlight for currently active slide */}
-                {isActive && (
-                  <div
-                    className="absolute inset-0 border-2 rounded-sm pointer-events-none z-20 shadow-[inset_0_0_12px_rgba(255,159,10,0.3)] transition-all duration-300"
-                    style={{ borderColor: game.accentColor || "#ff9f0a" }}
-                  />
-                )}
-
-                {/* Slide index overlay indicator (Top-right of tab) */}
-                <div className="absolute top-2.5 right-2.5 z-10 text-[8px] font-bold text-white/20 font-mono">
-                  {`0${idx + 1}`}
-                </div>
-
-                {/* Title & Category text overlay */}
-                <div className="relative z-10 flex flex-col pointer-events-none select-none">
-                  <span
-                    className="text-[8px] font-bold uppercase tracking-widest mb-0.5"
-                    style={{ color: isActive ? (game.accentColor || "#ff9f0a") : "rgba(255,255,255,0.25)" }}
-                  >
-                    {game.genre.split(" / ")[0]}
-                  </span>
-                  <span
-                    className={`text-[10px] md:text-[11px] font-black uppercase tracking-wide truncate ${
-                      isActive ? "text-white" : "text-white/40"
-                    }`}
-                  >
-                    {game.title}
-                  </span>
-                </div>
-              </button>
+                title={`Go to slide ${idx + 1}`}
+              />
             );
           })}
         </div>
@@ -187,4 +158,3 @@ export function HeroBanner({ onPlayGame }: HeroBannerProps) {
     </div>
   );
 }
-
