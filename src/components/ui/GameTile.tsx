@@ -92,7 +92,7 @@ export function GameTile({ game, index, onClick }: GameTileProps) {
       <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-br from-electric-blue/0 via-neon-purple/0 to-electric-blue/0 group-hover:from-electric-blue/60 group-hover:via-neon-purple/40 group-hover:to-electric-blue/60 transition-all duration-500 z-0" />
 
       {/* Card Inner Wrapper */}
-      <div className="relative z-10 rounded-xl overflow-hidden bg-[#0a0a0f]/80 backdrop-blur-md border border-white/[0.06] group-hover:border-white/[0.15] transition-colors">
+      <div className="relative z-10 rounded-xl overflow-hidden bg-[#161622]/90 backdrop-blur-md border border-white/[0.12] group-hover:border-white/[0.22] transition-colors">
         {/* Thumbnail and Video Area */}
         <div className="relative aspect-video overflow-hidden bg-black">
           {/* Static Image Thumbnail */}
@@ -111,7 +111,7 @@ export function GameTile({ game, index, onClick }: GameTileProps) {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
-                className="absolute inset-0 z-10 w-full h-full bg-[#0a0a0f]"
+                className="absolute inset-0 z-10 w-full h-full bg-[#161622]"
               >
                 <video
                   src={game.previewVideo || getPreviewVideo(game.genre, game.id)}
@@ -126,7 +126,7 @@ export function GameTile({ game, index, onClick }: GameTileProps) {
           </AnimatePresence>
 
           {/* Ambient Lighting Shades */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-transparent to-transparent opacity-85 z-20 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#161622] via-transparent to-transparent opacity-85 z-20 pointer-events-none" />
           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors duration-300 z-10 pointer-events-none" />
 
           {/* Status Badges */}
@@ -150,12 +150,12 @@ export function GameTile({ game, index, onClick }: GameTileProps) {
         </div>
 
         {/* Text Info Box */}
-        <div className="p-3.5 pt-2.5 relative z-20 bg-[#0a0a0f]/90">
+        <div className="p-3.5 pt-2.5 relative z-20 bg-[#161622]/95">
           <h3 className="text-sm font-bold text-white truncate group-hover:text-electric-blue transition-colors duration-200">
             {game.title}
           </h3>
           <div className="flex items-center justify-between mt-1.5">
-            <span className="text-[11px] text-white/40 font-semibold uppercase tracking-wider font-mono">
+            <span className="text-[11px] text-white/65 font-semibold uppercase tracking-wider font-mono">
               {game.genre}
             </span>
             <div className="flex items-center gap-2">
@@ -163,7 +163,7 @@ export function GameTile({ game, index, onClick }: GameTileProps) {
                 <Star className="w-2.5 h-2.5 fill-yellow-400/90 text-yellow-400/90" />
                 {game.rating}
               </span>
-              <span className="flex items-center gap-0.5 text-[11px] font-bold text-white/30">
+              <span className="flex items-center gap-0.5 text-[11px] font-bold text-white/55">
                 <Users className="w-2.5 h-2.5" />
                 {game.plays}
               </span>
