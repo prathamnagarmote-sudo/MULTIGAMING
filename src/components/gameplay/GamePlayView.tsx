@@ -31,7 +31,7 @@ interface GamePlayViewProps {
 export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  
+
   const [game, setGame] = useState<GameData | null>(null);
   const [suggestions, setSuggestions] = useState<GameData[]>([]);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
@@ -141,28 +141,23 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             const content = await file.async("blob");
             const blob = new Blob([content], { type: mimeType });
             const url = URL.createObjectURL(blob);
-            
+
             if (isSubscribed) {
               objectUrlsRef.current.push(url);
-              
-              // 1. Original ZIP name reference (with case-insensitive fallbacks)
+
+              // 1. Original ZIP name reference
               pathMap[name] = url;
-              pathMap[name.toLowerCase()] = url;
-              
+
               // 2. Normalized path reference (forward slashes)
               const normalized = name.replace(/\\/g, "/");
               pathMap[normalized] = url;
-              pathMap[normalized.toLowerCase()] = url;
               pathMap[`./${normalized}`] = url;
-              pathMap[`./${normalized.toLowerCase()}`] = url;
 
               // 3. Nested relative reference (if index.html is located in a subfolder)
               if (baseDir && normalized.startsWith(baseDir)) {
                 const relativeToHtml = normalized.substring(baseDir.length);
                 pathMap[relativeToHtml] = url;
-                pathMap[relativeToHtml.toLowerCase()] = url;
                 pathMap[`./${relativeToHtml}`] = url;
-                pathMap[`./${relativeToHtml.toLowerCase()}`] = url;
               }
             }
           });
@@ -187,27 +182,22 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               function resolvePath(url) {
                 if (!url) return url;
                 
-                // Ensure url is a string to prevent crashes on non-string inputs (like URL objects)
-                let urlStr = '';
-                if (typeof url === 'string') {
-                  urlStr = url;
-                } else if (url instanceof URL) {
-                  urlStr = url.href;
-                } else {
+                // Safe URL Casting (resolves TypeError splits on native URL objects)
+                if (typeof url !== 'string') {
                   try {
-                    urlStr = String(url);
+                    url = url.toString();
                   } catch (e) {
                     return url;
                   }
                 }
                 
-                // If it's already a resolved Blob URL, return directly
-                if (blobUrls.has(urlStr)) return url;
+                // 1. If it's already a resolved Blob URL, return directly
+                if (blobUrls.has(url)) return url;
                 
                 // Strip hash and query params
-                let cleanUrl = urlStr.split('#')[0].split('?')[0];
+                let cleanUrl = url.split('#')[0].split('?')[0];
                 
-                // Identify prefixes to strip (browser-resolved absolute paths in blob iframe)
+                // 2. Identify prefixes to strip (browser-resolved absolute paths in blob iframe)
                 const origin = window.location.origin;
                 const blobPrefix = 'blob:' + origin + '/';
                 const originPrefix = origin + '/';
@@ -219,36 +209,36 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   relative = relative.substring(originPrefix.length);
                 }
                 
-                // Strip browser-resolved UUID folder prefixes (e.g. "d5c808f2-39c2-4a0b-8d76-e17926b484ee/assets/js")
-                relative = relative.replace(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\//, '');
-                
-                // 1. Direct pathMap lookup
+                // 3. Direct pathMap lookup
                 if (pathMap[relative]) return pathMap[relative];
                 
-                // 2. Case-insensitive lookup fallback
-                let relativeLower = relative.toLowerCase();
-                if (pathMap[relativeLower]) return pathMap[relativeLower];
-                
-                // 3. Try with leading './' removed
+                // 4. Try with leading './' removed
                 let noDot = relative.replace(/^\\.\\//, '');
                 if (pathMap[noDot]) return pathMap[noDot];
-                let noDotLower = noDot.toLowerCase();
-                if (pathMap[noDotLower]) return pathMap[noDotLower];
                 
-                // 4. Try decoding URI encoded characters
+                // 5. Try decoding URI encoded characters
                 try {
                   let decoded = decodeURIComponent(relative);
                   if (pathMap[decoded]) return pathMap[decoded];
-                  let decodedLower = decoded.toLowerCase();
-                  if (pathMap[decodedLower]) return pathMap[decodedLower];
-                  
                   let decodedNoDot = decoded.replace(/^\\.\\//, '');
                   if (pathMap[decodedNoDot]) return pathMap[decodedNoDot];
-                  let decodedNoDotLower = decodedNoDot.toLowerCase();
-                  if (pathMap[decodedNoDotLower]) return pathMap[decodedNoDotLower];
                 } catch (e) {}
                 
-                // 5. Fallback suffix matching as a last resort
+                // 6. Case-insensitive lookup fallback (crucial for filename casing discrepancies)
+                const lowerRelative = relative.toLowerCase();
+                for (const key in pathMap) {
+                  if (key.toLowerCase() === lowerRelative) {
+                    return pathMap[key];
+                  }
+                }
+                const lowerNoDot = noDot.toLowerCase();
+                for (const key in pathMap) {
+                  if (key.toLowerCase() === lowerNoDot) {
+                    return pathMap[key];
+                  }
+                }
+                
+                // 7. Fallback suffix matching as a last resort
                 for (const key in pathMap) {
                   if (relative.endsWith(key) || key.endsWith(relative)) {
                     return pathMap[key];
@@ -352,9 +342,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               safeOverride(HTMLScriptElement.prototype, 'src');
               safeOverride(HTMLLinkElement.prototype, 'href');
               safeOverride(HTMLAudioElement.prototype, 'src');
-              safeOverride(HTMLVideoElement.prototype, 'src');
-              safeOverride(HTMLIFrameElement.prototype, 'src');
-              safeOverride(HTMLTrackElement.prototype, 'src');
               safeOverride(HTMLSourceElement.prototype, 'src');
             })();
           </script>
@@ -395,7 +382,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
         // Resiliently handles quotes (double, single, none), query parameters, and hashes.
         for (const [relativePath, blobUrl] of Object.entries(pathMap)) {
           const escapedPath = relativePath.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\\\$&");
-          
+
           const attrRegex = new RegExp(`(src|href|value|data)\\s*=\\s*(["']?)(\\\\.\\\\/|\\\\/)?${escapedPath}(\\\\?[^"'>\\s]*)?(#[^"'>\\s]*)?\\\\2`, "gi");
           indexText = indexText.replace(attrRegex, `$1="${blobUrl}"`);
 
@@ -406,10 +393,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
         // Create Blob for modified index.html
         const indexBlob = new Blob([indexText], { type: "text/html" });
         const finalUrl = URL.createObjectURL(indexBlob);
-        
+
         if (isSubscribed) {
           objectUrlsRef.current.push(finalUrl);
-          
+
           // Map index.html references to finalUrl as well so dynamic menu/reloads inside sandbox work
           pathMap[indexPath] = finalUrl;
           const normalizedIndex = indexPath.replace(/\\/g, "/");
@@ -551,7 +538,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black border border-white/[0.08] shadow-[0_15px_40px_rgba(0,0,0,0.8)] z-20 group">
             {/* Screen static scanner overlay */}
             <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[size:100%_4px] opacity-10 pointer-events-none z-10" />
-            
+
             {zipLoading && (
               <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center gap-4 z-30">
                 <div className="w-12 h-12 rounded-full border-2 border-t-electric-blue border-r-neon-purple border-b-white/10 border-l-white/10 animate-spin shadow-[0_0_15px_rgba(0,240,255,0.3)]" />
@@ -618,11 +605,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               <div className="flex items-center rounded-lg bg-white/[0.04] p-0.5 border border-white/[0.06]">
                 <button
                   onClick={() => handleVote("like")}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition-all text-xs font-semibold ${
-                    game.userVote === "like"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition-all text-xs font-semibold ${game.userVote === "like"
                       ? "bg-emerald-500/20 text-emerald-400 shadow-inner"
                       : "text-white/40 hover:text-white/80 hover:bg-white/[0.03]"
-                  }`}
+                    }`}
                 >
                   <ThumbsUp className="w-3.5 h-3.5" />
                   <span className="font-mono">{game.likes}</span>
@@ -630,11 +616,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 <div className="w-[1px] h-4 bg-white/10" />
                 <button
                   onClick={() => handleVote("dislike")}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition-all text-xs font-semibold ${
-                    game.userVote === "dislike"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition-all text-xs font-semibold ${game.userVote === "dislike"
                       ? "bg-red-500/20 text-red-400 shadow-inner"
                       : "text-white/40 hover:text-white/80 hover:bg-white/[0.03]"
-                  }`}
+                    }`}
                 >
                   <ThumbsDown className="w-3.5 h-3.5" />
                   <span className="font-mono">{game.dislikes}</span>
@@ -685,7 +670,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
       <div className="mt-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Specification and Game details columns (8 cols) */}
         <div className="lg:col-span-8 flex flex-col gap-10">
-          
+
           {/* Segment 1: Technical Specs Overview */}
           <section className="p-6 rounded-2xl bg-[#07070a]/60 border border-white/[0.04] backdrop-blur-xl">
             <h2 className="text-lg font-heading font-black tracking-wider uppercase mb-5 text-transparent bg-clip-text bg-gradient-to-r from-electric-blue to-neon-cyan">
@@ -788,12 +773,11 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                       >
                         <span className="text-sm font-bold text-white/80">{faq.question}</span>
                         <ChevronDown
-                          className={`w-4 h-4 text-white/40 transition-transform duration-300 ${
-                            isOpen ? "rotate-180 text-electric-blue" : ""
-                          }`}
+                          className={`w-4 h-4 text-white/40 transition-transform duration-300 ${isOpen ? "rotate-180 text-electric-blue" : ""
+                            }`}
                         />
                       </button>
-                      
+
                       <AnimatePresence initial={false}>
                         {isOpen && (
                           <motion.div
@@ -820,7 +804,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
         <div className="lg:col-span-4 flex flex-col gap-5 lg:sticky lg:top-24">
           <div className="p-6 rounded-2xl bg-gradient-to-br from-[#07070a]/80 to-[#0c0c14]/40 border border-white/[0.06] shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-electric-blue/10 to-transparent blur-xl" />
-            
+
             <h3 className="text-sm font-heading font-black tracking-widest uppercase mb-4 text-white/70">
               Developer Info
             </h3>

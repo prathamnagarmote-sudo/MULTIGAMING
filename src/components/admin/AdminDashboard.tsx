@@ -27,7 +27,6 @@ import {
   addGameDB,
   updateGameDB,
   deleteGameDB,
-  toggleHeroDB,
   saveGameZIP
 } from "@/utils/db";
 
@@ -258,17 +257,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
     }
   };
 
-  const handleToggleHero = (id: string) => {
-    const result = toggleHeroDB(id);
-    if (!result.success) {
-      setErrorMessage(result.message);
-      setTimeout(() => setErrorMessage(null), 5000);
-    } else {
-      setSuccessMessage(result.message);
-      setTimeout(() => setSuccessMessage(null), 2500);
-      refreshList();
-    }
-  };
+
 
   // FAQ CRUD items
   const handleAddFAQ = () => {
@@ -299,8 +288,6 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
     updated[index][field] = val;
     setGameplayVideos(updated);
   };
-
-  const heroCount = games.filter((g) => g.isHero).length;
 
   return (
     <div className="w-full text-white pb-16">
@@ -343,7 +330,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
             Developer Admin Center
           </h1>
           <p className="text-xs text-white/40 mt-1 font-mono">
-            Manage your dynamic library slots, toggle featured banners, and configure interactive specs.
+            Manage your dynamic library slots, upload HTML5 ZIP files, and configure interactive specs.
           </p>
         </div>
 
@@ -371,17 +358,6 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
               </span>
             </div>
 
-            {/* Slider count alerts */}
-            <div className="mb-4 p-3 rounded-lg bg-white/[0.02] border border-white/[0.04] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-[11px] font-bold text-white/60">Hero Slider Slots Selected</span>
-              </div>
-              <span className={`text-xs font-mono font-extrabold ${heroCount === 4 ? "text-emerald-400" : "text-amber-400"}`}>
-                {heroCount} / 4 Selected
-              </span>
-            </div>
-
             <div className="flex flex-col gap-3 max-h-[640px] overflow-y-auto pr-1 custom-scrollbar">
               {games.map((g) => (
                 <div
@@ -405,19 +381,6 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0 ml-4">
-                    {/* Toggle Slider Check */}
-                    <button
-                      onClick={() => handleToggleHero(g.id)}
-                      className={`p-2 rounded-lg transition-all ${
-                        g.isHero
-                          ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                          : "text-white/20 hover:text-white/50 hover:bg-white/[0.04]"
-                      }`}
-                      title={g.isHero ? "Remove from Hero Carousel Slider" : "Add to Hero Carousel Slider"}
-                    >
-                      <Trophy className="w-3.5 h-3.5" />
-                    </button>
-
                     {/* Edit button */}
                     <button
                       onClick={() => handleEditSelect(g)}
