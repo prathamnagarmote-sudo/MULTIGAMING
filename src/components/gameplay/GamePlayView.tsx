@@ -49,6 +49,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isBarHidden, setIsBarHidden] = useState(false);
   const [isPortraitOverride, setIsPortraitOverride] = useState<boolean | null>(null);
+  const [aspectRatioOverride, setAspectRatioOverride] = useState<"16:9" | "9:16" | "3:4" | "2:3" | null>(null);
   const [showEscToast, setShowEscToast] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [showReportToast, setShowReportToast] = useState(false);
@@ -718,7 +719,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
   // Resolve precise aspect ratio style based on game metadata to prevent black spacing
   const isPortraitMode = isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait;
-  const gameAspect = game.aspectRatio || (game.isPortrait ? "9:16" : "16:9");
+  const gameAspect = aspectRatioOverride !== null 
+    ? aspectRatioOverride 
+    : (game.aspectRatio || (game.isPortrait ? "9:16" : "16:9"));
   
   let aspectClass = "aspect-video"; 
   if (isPortraitMode) {
@@ -855,6 +858,26 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   <ChevronUp className="w-3.5 h-3.5 animate-bounce" />
                   Show bar
                 </button>
+              </div>
+            )}
+
+            {/* Floating aspect ratio quick-switch bar (only shown for portrait layouts) */}
+            {isPortraitMode && (
+              <div className="absolute top-4 right-4 z-30 flex items-center gap-1 bg-[#09090d]/85 backdrop-blur-md border border-white/[0.08] rounded-xl p-1 shadow-[0_5px_15px_rgba(0,0,0,0.5)] pointer-events-auto">
+                <span className="text-[8px] font-mono text-white/45 px-2 uppercase tracking-widest font-bold">Aspect Ratio</span>
+                {(["9:16", "3:4", "2:3"] as const).map((ratio) => (
+                  <button
+                    key={ratio}
+                    onClick={() => setAspectRatioOverride(ratio)}
+                    className={`px-2.5 py-1 rounded-lg text-[9px] font-mono font-extrabold uppercase transition-all duration-200 cursor-pointer ${
+                      gameAspect === ratio
+                        ? "bg-neon-purple text-white shadow-[0_0_8px_rgba(168,85,247,0.4)]"
+                        : "text-white/40 hover:text-white/70"
+                    }`}
+                  >
+                    {ratio === "9:16" ? "9:16 Mobile" : ratio === "3:4" ? "3:4 Arcade" : "2:3 Compact"}
+                  </button>
+                ))}
               </div>
             )}
 
