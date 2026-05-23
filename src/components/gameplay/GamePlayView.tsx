@@ -885,8 +885,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               className={`relative overflow-hidden z-10 ${
                 isPortraitMode
                   ? isFullscreen 
-                    ? `h-full ${aspectClass} mx-auto flex-shrink-0 bg-transparent` 
-                    : `w-[380px] sm:w-[420px] md:w-[460px] max-w-full ${aspectClass} mx-auto my-4 rounded-xl border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.8)] flex-shrink-0 bg-transparent`
+                    ? `w-full h-full md:h-full md:w-auto ${aspectClass} mx-auto flex-shrink-0 bg-transparent` 
+                    : `h-[75vh] md:h-[85vh] w-auto max-w-full ${aspectClass} mx-auto flex-shrink-0 bg-transparent`
                   : isFullscreen
                     ? "w-full h-full flex-shrink-0 bg-black"
                     : "w-full aspect-video flex-shrink-0 bg-black"
@@ -941,12 +941,12 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
             {/* Premium Action Control Toolbar */}
             <div 
-              className={`flex flex-wrap items-center justify-between gap-4 p-4 transition-all duration-500 z-30 ${
+              className={`flex flex-wrap items-center justify-between gap-4 transition-all duration-500 z-30 ${
                 isFullscreen 
-                  ? `absolute bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-40px)] max-w-5xl rounded-2xl bg-[#07070a]/95 backdrop-blur-2xl border border-white/[0.08] shadow-[0_10px_40px_rgba(0,0,0,0.85)] ${
+                  ? `absolute bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-40px)] max-w-5xl rounded-2xl bg-[#0a0a0f]/95 backdrop-blur-2xl border border-white/[0.08] shadow-[0_10px_40px_rgba(0,0,0,0.85)] p-4 ${
                       isBarHidden ? "translate-y-36 opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
                     }`
-                  : "w-full border-t border-white/[0.05] bg-[#07070a]/60 backdrop-blur-md"
+                  : "w-full bg-[#0a0a0f] border-t border-white/[0.04] shadow-[0_-4px_20px_rgba(0,0,0,0.4)] px-4 py-3 sm:px-6 relative z-20"
               }`}
             >
               {/* Left toolbar details */}
