@@ -786,8 +786,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
       {/* Game Layout Block */}
       <div ref={containerRef} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* CENTER VIEWPORT (8 cols in LG) */}
-        <div className="lg:col-span-8 flex flex-col">
+        {/* CENTER VIEWPORT (9 cols in LG) */}
+        <div className="lg:col-span-9 flex flex-col">
           {/* Dedicated Player Frame wrapper - supports standard and fullscreen theater displays */}
           <div 
             ref={playerFrameRef}
@@ -849,7 +849,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 (isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait)
                   ? isFullscreen 
                     ? "h-[calc(100vh-125px)] aspect-[9/16] rounded-2xl border border-white/10 shadow-2xl my-auto" 
-                    : "w-[380px] sm:w-[400px] max-w-full aspect-[9/16] mx-auto my-4 rounded-xl border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.8)]"
+                    : "w-[380px] sm:w-[420px] md:w-[460px] max-w-full aspect-[9/16] mx-auto my-4 rounded-xl border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.8)]"
                   : isFullscreen
                     ? "h-[calc(100vh-125px)] aspect-video rounded-2xl border border-white/10 shadow-2xl my-auto"
                     : "w-full aspect-video"
@@ -1057,8 +1057,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           </div>
         </div>
 
-        {/* SIDE SUGGESTIONS BAR (4 cols in LG) */}
-        <div className="lg:col-span-4 flex flex-col h-full bg-[#050508]/40 border border-white/[0.04] rounded-2xl p-4">
+        {/* SIDE SUGGESTIONS BAR (3 cols in LG) */}
+        <div className="lg:col-span-3 flex flex-col h-full bg-[#050508]/40 border border-white/[0.04] rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-4 pb-2 border-b border-white/[0.05]">
             <Gamepad className="w-4 h-4 text-electric-blue" />
             <h3 className="text-sm font-heading font-black tracking-wider uppercase">

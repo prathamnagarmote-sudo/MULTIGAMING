@@ -109,7 +109,7 @@ export default function Home() {
         />
 
         {/* Content offset by sidebar */}
-        <div className="pl-[240px] min-h-screen flex flex-col">
+        <div className="pl-[72px] min-h-screen flex flex-col">
           {/* Sticky top bar */}
           <TopBar
             currentView={activeView}

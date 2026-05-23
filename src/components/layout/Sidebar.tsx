@@ -12,20 +12,29 @@ interface SidebarProps {
 
 export function Sidebar({ currentView, onChangeView }: SidebarProps) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
 
   return (
     <motion.aside
       initial={{ x: -80, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="fixed left-0 top-0 bottom-0 w-[240px] bg-[#030303]/70 backdrop-blur-2xl border-r border-white/[0.06] z-50 flex flex-col overflow-hidden animate-fade-in"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`fixed left-0 top-0 bottom-0 bg-[#030303]/90 backdrop-blur-2xl border-r border-white/[0.06] z-50 flex flex-col overflow-hidden transition-all duration-300 shadow-[10px_0_30px_rgba(0,0,0,0.3)] animate-fade-in ${
+        isHovered ? "w-[240px]" : "w-[72px]"
+      }`}
     >
       {/* Logo */}
-      <div className="px-5 py-5 flex items-center gap-3 border-b border-white/[0.06]">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-electric-blue to-neon-purple flex items-center justify-center shadow-[0_0_20px_rgba(0,240,255,0.3)]">
+      <div className={`py-5 flex items-center border-b border-white/[0.06] transition-all duration-300 ${
+        isHovered ? "px-5 gap-3" : "justify-center px-0"
+      }`}>
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-electric-blue to-neon-purple flex items-center justify-center shadow-[0_0_20px_rgba(255,0,85,0.3)] shrink-0">
           <Gamepad2 className="w-5 h-5 text-white" />
         </div>
-        <div>
+        <div className={`flex flex-col whitespace-nowrap transition-all duration-300 ${
+          isHovered ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 w-0 overflow-hidden pointer-events-none"
+        }`}>
           <span className="text-lg font-heading font-black text-white tracking-wider uppercase">
             Zylo
           </span>
@@ -40,14 +49,21 @@ export function Sidebar({ currentView, onChangeView }: SidebarProps) {
             onChangeView("home");
             setActiveCategory(null);
           }}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 relative overflow-hidden group ${
+          className={`w-full flex items-center rounded-lg text-left transition-all duration-200 relative overflow-hidden group ${
+            isHovered ? "px-3 py-2.5 gap-3" : "justify-center p-2.5"
+          } ${
             currentView === "home"
               ? "bg-electric-blue/10 text-electric-blue border border-electric-blue/20"
               : "text-white/50 hover:text-white/80 hover:bg-white/[0.03]"
           }`}
+          title="Arcade Lobby"
         >
-          <Home className={`w-4.5 h-4.5 transition-colors ${currentView === "home" ? "text-electric-blue" : "text-white/40"}`} />
-          <span className="text-xs font-bold uppercase tracking-wider">Arcade Lobby</span>
+          <Home className={`w-4.5 h-4.5 shrink-0 transition-colors ${currentView === "home" ? "text-electric-blue" : "text-white/40 group-hover:text-white"}`} />
+          <span className={`text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-300 ${
+            isHovered ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 w-0 overflow-hidden pointer-events-none"
+          }`}>
+            Arcade Lobby
+          </span>
         </button>
 
         <button
@@ -55,15 +71,22 @@ export function Sidebar({ currentView, onChangeView }: SidebarProps) {
             onChangeView("admin");
             setActiveCategory(null);
           }}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 relative overflow-hidden group ${
+          className={`w-full flex items-center rounded-lg text-left transition-all duration-200 relative overflow-hidden group ${
+            isHovered ? "px-3 py-2.5 gap-3" : "justify-center p-2.5"
+          } ${
             currentView === "admin"
               ? "bg-neon-purple/10 text-neon-purple border border-neon-purple/20"
               : "text-white/50 hover:text-white/80 hover:bg-white/[0.03]"
           }`}
+          title="Developer Admin"
         >
-          <Settings className={`w-4.5 h-4.5 transition-colors ${currentView === "admin" ? "text-neon-purple animate-spin-slow" : "text-white/40"}`} />
-          <span className="text-xs font-bold uppercase tracking-wider">Developer Admin</span>
-          {currentView === "admin" && (
+          <Settings className={`w-4.5 h-4.5 shrink-0 transition-colors ${currentView === "admin" ? "text-neon-purple animate-spin-slow" : "text-white/40 group-hover:text-white"}`} />
+          <span className={`text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-300 ${
+            isHovered ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 w-0 overflow-hidden pointer-events-none"
+          }`}>
+            Developer Admin
+          </span>
+          {currentView === "admin" && isHovered && (
             <span className="absolute right-3 w-1.5 h-1.5 rounded-full bg-neon-purple shadow-[0_0_8px_rgba(184,0,255,0.8)]" />
           )}
         </button>
@@ -71,7 +94,9 @@ export function Sidebar({ currentView, onChangeView }: SidebarProps) {
 
       {/* Categories */}
       <div className="flex-1 overflow-y-auto px-2 py-2 custom-scrollbar">
-        <div className="px-3 py-2">
+        <div className={`px-3 py-2 transition-all duration-300 ${
+          isHovered ? "opacity-100 h-auto" : "opacity-0 h-0 overflow-hidden pointer-events-none"
+        }`}>
           <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/20">Categories</span>
         </div>
 
@@ -82,11 +107,14 @@ export function Sidebar({ currentView, onChangeView }: SidebarProps) {
               setActiveCategory(cat.id === activeCategory ? null : cat.id);
               onChangeView("home");
             }}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 group relative overflow-hidden ${
+            className={`w-full flex items-center rounded-lg text-left transition-all duration-200 group relative overflow-hidden ${
+              isHovered ? "px-3 py-2.5 gap-3" : "justify-center p-2.5"
+            } ${
               activeCategory === cat.id
                 ? "bg-electric-blue/10 text-electric-blue"
                 : "text-white/50 hover:text-white/80 hover:bg-white/[0.04]"
             }`}
+            title={cat.name}
           >
             {/* Active indicator */}
             {activeCategory === cat.id && (
@@ -96,9 +124,15 @@ export function Sidebar({ currentView, onChangeView }: SidebarProps) {
               />
             )}
 
-            <span className="text-lg w-7 text-center">{cat.icon}</span>
-            <span className="flex-1 text-sm font-medium">{cat.name}</span>
-            <span className={`text-[11px] font-medium ${
+            <span className="text-lg w-7 text-center shrink-0">{cat.icon}</span>
+            <span className={`flex-1 text-sm font-medium whitespace-nowrap transition-all duration-300 ${
+              isHovered ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4 w-0 overflow-hidden pointer-events-none"
+            }`}>
+              {cat.name}
+            </span>
+            <span className={`text-[11px] font-medium whitespace-nowrap transition-all duration-300 ${
+              isHovered ? "opacity-100" : "opacity-0 w-0 overflow-hidden pointer-events-none"
+            } ${
               activeCategory === cat.id ? "text-electric-blue/60" : "text-white/20"
             }`}>
               {cat.count}
