@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Home as HomeIcon, Settings } from "lucide-react";
-import { LoadingScreen } from "@/components/loading/LoadingScreen";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { Footer } from "@/components/layout/Footer";
@@ -14,7 +13,7 @@ import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { GameData, getGamesDB } from "@/utils/db";
 
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [games, setGames] = useState<GameData[]>([]);
   const [activeView, setActiveView] = useState<"home" | "play" | "admin">("home");
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
@@ -99,7 +98,8 @@ export default function Home() {
   const shootingGames = games.filter(
     (g) =>
       g.genre.toLowerCase() === "shooting" ||
-      g.tags.some((t) => t.toLowerCase().includes("shooting") || t.toLowerCase().includes("fps"))
+      g.genre.toLowerCase() === "action" ||
+      g.tags.some((t) => t.toLowerCase().includes("shooting") || t.toLowerCase().includes("fps") || t.toLowerCase().includes("battle") || t.toLowerCase().includes("gun"))
   );
 
   const racingGames = games.filter(
@@ -126,18 +126,12 @@ export default function Home() {
 
   return (
     <>
-      {/* Cinematic loading sequence */}
-      {isLoading && <LoadingScreen onComplete={() => setIsLoading(false)} />}
-
       {/* Plain dark background replacement for 3D world */}
       <div className="fixed inset-0 bg-[#08080c] -z-10" />
 
       {/* Main App Shell */}
-      <div
-        className={`relative w-full min-h-screen transition-opacity duration-1000 ${
-          isLoading ? "opacity-0 overflow-hidden h-screen" : "opacity-100"
-        }`}
-      >
+      <div className="relative w-full min-h-screen">
+
         {/* Left sidebar */}
         <Sidebar
           currentView={activeView}
@@ -245,39 +239,41 @@ export default function Home() {
           </main>
         </div>
 
-        {/* Mobile Bottom Navigation Bar */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#030303]/95 backdrop-blur-2xl border-t border-white/[0.08] flex items-center justify-around px-2 py-1.5 safe-bottom">
-          <button
-            onClick={() => {
-              setActiveView("home");
-              setActiveGameId(null);
-              refreshGames();
-            }}
-            className={`flex flex-col items-center gap-0.5 py-1.5 px-4 rounded-xl transition-all duration-200 ${
-              activeView === "home"
-                ? "text-electric-blue"
-                : "text-white/40"
-            }`}
-          >
-            <HomeIcon className="w-5 h-5" />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Home</span>
-          </button>
+        {/* Mobile Bottom Navigation Bar — premium glassmorphic design */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 safe-bottom">
+          <div className="mx-3 mb-2 flex items-center justify-around rounded-2xl bg-[#0c0c14]/90 backdrop-blur-2xl border border-white/[0.08] shadow-[0_-4px_30px_rgba(0,0,0,0.6)] px-1 py-1">
+            <button
+              onClick={() => {
+                setActiveView("home");
+                setActiveGameId(null);
+                refreshGames();
+              }}
+              className={`flex flex-col items-center gap-0.5 py-2 px-5 rounded-xl transition-all duration-200 ${
+                activeView === "home"
+                  ? "text-electric-blue bg-electric-blue/10"
+                  : "text-white/40 active:text-white/60"
+              }`}
+            >
+              <HomeIcon className="w-5 h-5" />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Home</span>
+            </button>
 
-          <button
-            onClick={() => {
-              setActiveView("admin");
-              setActiveGameId(null);
-              refreshGames();
-            }}
-            className={`flex flex-col items-center gap-0.5 py-1.5 px-4 rounded-xl transition-all duration-200 ${
-              activeView === "admin"
-                ? "text-neon-purple"
-                : "text-white/40"
-            }`}
-          >
-            <Settings className="w-5 h-5" />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Admin</span>
-          </button>
+            <button
+              onClick={() => {
+                setActiveView("admin");
+                setActiveGameId(null);
+                refreshGames();
+              }}
+              className={`flex flex-col items-center gap-0.5 py-2 px-5 rounded-xl transition-all duration-200 ${
+                activeView === "admin"
+                  ? "text-neon-purple bg-neon-purple/10"
+                  : "text-white/40 active:text-white/60"
+              }`}
+            >
+              <Settings className="w-5 h-5" />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Admin</span>
+            </button>
+          </div>
         </nav>
       </div>
     </>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { GameTile } from "@/components/ui/GameTile";
 import { GameData } from "@/utils/db";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ChevronDown, Grid3x3 } from "lucide-react";
 
 interface GameGridProps {
   title: string;
@@ -17,8 +17,11 @@ interface GameGridProps {
 export function GameGrid({ title, subtitle, games, icon, showViewAll = true, onSelectGame }: GameGridProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const displayedGames = isExpanded ? games : games.slice(0, 6);
-  const hasMore = games.length > 6;
+  // Show 8 on desktop (2 rows of 4), all when expanded
+  const displayedGames = isExpanded ? games : games.slice(0, 8);
+  const hasMore = games.length > 8;
+
+  if (games.length === 0) return null;
 
   return (
     <section className="mb-10">
@@ -27,23 +30,38 @@ export function GameGrid({ title, subtitle, games, icon, showViewAll = true, onS
         <div className="flex items-center gap-3">
           {icon && <span className="text-2xl">{icon}</span>}
           <div>
-            <h2 className="text-xl font-bold text-white">{title}</h2>
-            {subtitle && <p className="text-sm text-white/70 mt-0.5">{subtitle}</p>}
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-lg sm:text-xl font-bold text-white">{title}</h2>
+              <span className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.08] text-[10px] font-bold text-white/40 font-mono">
+                <Grid3x3 className="w-2.5 h-2.5" />
+                {games.length}
+              </span>
+            </div>
+            {subtitle && <p className="text-xs sm:text-sm text-white/50 mt-0.5">{subtitle}</p>}
           </div>
         </div>
         {showViewAll && hasMore && (
           <button 
             onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center gap-1 text-sm font-medium text-white/70 hover:text-electric-blue transition-colors group"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white/60 bg-white/[0.04] border border-white/[0.08] hover:text-electric-blue hover:bg-electric-blue/10 hover:border-electric-blue/20 transition-all duration-200 group"
           >
-            {isExpanded ? "Show Less" : "View All"}
-            <ChevronRight className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-90" : "group-hover:translate-x-0.5"}`} />
+            {isExpanded ? (
+              <>
+                Show Less
+                <ChevronDown className="w-3.5 h-3.5 rotate-180 transition-transform" />
+              </>
+            ) : (
+              <>
+                View All ({games.length})
+                <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </>
+            )}
           </button>
         )}
       </div>
 
-      {/* Game Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
+      {/* Game Grid — 2 cols mobile, 3 tablet, 4 desktop */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
         {displayedGames.map((game, i) => (
           <GameTile
             key={game.id}
@@ -56,4 +74,3 @@ export function GameGrid({ title, subtitle, games, icon, showViewAll = true, onS
     </section>
   );
 }
-

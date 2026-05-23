@@ -841,7 +841,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 ? `fixed inset-0 z-50 flex flex-col items-center justify-center bg-black transition-all duration-300 ${
                     isBarHidden ? "p-0" : "p-0 pb-[88px]"
                   }`
-                : "flex flex-col rounded-2xl border border-white/[0.08] bg-[#030303] shadow-[0_15px_40px_rgba(0,0,0,0.85)] z-20"
+                : "flex flex-col bg-[#030303] shadow-[0_15px_40px_rgba(0,0,0,0.85)] z-20"
             }`}
           >
             {/* Ambient Blurred Background backdrop (shown in fullscreen or portrait mode) */}
@@ -961,6 +961,18 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 />
               )}
             </div>
+
+            {/* Mobile Fullscreen Floating Button — always visible on touch devices */}
+            {!isFullscreen && (
+              <button
+                onClick={toggleFullscreen}
+                className="md:hidden absolute top-3 right-3 z-30 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black/70 backdrop-blur-md border border-white/15 text-white/80 active:text-electric-blue active:bg-black/90 transition-all shadow-lg"
+                title="Fullscreen Mode"
+              >
+                <Maximize2 className="w-4 h-4" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Fullscreen</span>
+              </button>
+            )}
 
             {/* Premium Action Control Toolbar */}
             <div 

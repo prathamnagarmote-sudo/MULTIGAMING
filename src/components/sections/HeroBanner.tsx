@@ -67,7 +67,7 @@ export function HeroBanner({ onPlayGame, onExploreCategory }: HeroBannerProps) {
       <section
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="relative -mx-6 h-[420px] md:h-[560px] overflow-hidden border border-white/[0.08] bg-[#030303] shadow-[0_20px_50px_rgba(0,0,0,0.65)] rounded-2xl select-none group"
+        className="relative -mx-3 sm:-mx-4 md:-mx-6 h-[280px] sm:h-[360px] md:h-[480px] overflow-hidden border border-white/[0.06] bg-[#030303] shadow-[0_20px_50px_rgba(0,0,0,0.65)] sm:rounded-2xl select-none group"
       >
         {/* Spatial Cyber Grid Mesh Background */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:40px_40px] z-10 pointer-events-none" />
