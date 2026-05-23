@@ -18,7 +18,8 @@ import {
   UploadCloud,
   FileArchive,
   Smartphone,
-  Laptop
+  Laptop,
+  Search
 } from "lucide-react";
 import {
   GameData,
@@ -58,6 +59,8 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
   const [plays, setPlays] = useState("100K");
   const [isPortrait, setIsPortrait] = useState(false);
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16" | "3:4" | "2:3">("16:9");
+  const [activeTab, setActiveTab] = useState<"general" | "media" | "hosting" | "addons">("general");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // ZIP Upload States
   const [isZipGame, setIsZipGame] = useState(false);
@@ -358,8 +361,8 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
           <div className="p-5 rounded-2xl bg-[#07070a]/60 border border-white/[0.04] backdrop-blur-xl">
             <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/[0.05]">
               <div className="flex items-center gap-2">
-                <FolderOpen className="w-4 h-4 text-electric-blue" />
-                <h2 className="text-sm font-heading font-black uppercase tracking-wider">
+                <FolderOpen className="w-4 h-4 text-electric-blue animate-pulse-subtle" />
+                <h2 className="text-sm font-heading font-black uppercase tracking-wider text-white/90">
                   Game Catalog List
                 </h2>
               </div>
@@ -368,49 +371,102 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
               </span>
             </div>
 
-            <div className="flex flex-col gap-3 max-h-[640px] overflow-y-auto pr-1 custom-scrollbar">
-              {games.map((g) => (
-                <div
-                  key={g.id}
-                  className={`p-3 rounded-xl bg-white/[0.02] border transition-all flex items-center justify-between ${
-                    editingGame?.id === g.id
-                      ? "border-electric-blue/40 bg-electric-blue/5"
-                      : "border-white/[0.04] hover:bg-white/[0.04] hover:border-white/[0.08]"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <img
-                      src={g.thumbnail}
-                      alt=""
-                      className="w-11 h-11 rounded-lg object-cover border border-white/10 shrink-0"
-                    />
-                    <div className="flex flex-col overflow-hidden">
-                      <span className="text-xs font-bold truncate text-white/80">{g.title}</span>
-                      <span className="text-[10px] text-white/30 uppercase mt-0.5 font-mono">{g.genre}</span>
+            {/* Specialized + Add Game Button & Search Bar */}
+            <div className="flex flex-col gap-3 mb-4 select-none">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-white/35 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search catalog by title or genre..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-white/[0.02] border border-white/[0.06] focus:border-electric-blue/40 rounded-xl py-2 pl-9 pr-4 text-xs text-white placeholder:text-white/30 focus:outline-none transition-all duration-300"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleResetForm}
+                className="w-full py-2.5 rounded-xl border border-dashed border-white/10 hover:border-neon-purple/40 bg-white/[0.01] hover:bg-neon-purple/5 text-[11px] font-black uppercase tracking-widest text-white/60 hover:text-white flex items-center justify-center gap-2 transition-all duration-300 shadow-inner group"
+              >
+                <Plus className="w-3.5 h-3.5 group-hover:rotate-90 transition-transform duration-300 text-neon-purple" />
+                + Create New Game Entry
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-3 max-h-[580px] overflow-y-auto pr-1 custom-scrollbar">
+              {games.filter((g) => 
+                g.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                g.genre.toLowerCase().includes(searchQuery.toLowerCase())
+              ).map((g) => {
+                const isSelected = editingGame?.id === g.id;
+                return (
+                  <div
+                    key={g.id}
+                    className={`p-3 rounded-xl bg-white/[0.02] border transition-all flex items-center justify-between ${
+                      isSelected
+                        ? "border-l-4 border-l-neon-purple border-electric-blue/30 bg-electric-blue/5 shadow-[0_4px_15px_rgba(99,102,241,0.05)]"
+                        : "border-white/[0.04] hover:bg-white/[0.04] hover:border-white/[0.08]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <img
+                        src={g.thumbnail}
+                        alt=""
+                        className="w-11 h-11 rounded-lg object-cover border border-white/10 shrink-0 shadow-md"
+                      />
+                      <div className="flex flex-col overflow-hidden">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-bold truncate text-white/80">{g.title}</span>
+                          {g.isZipGame && (
+                            <FileArchive className="w-3 h-3 text-neon-purple shrink-0" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <span className="text-[9px] text-white/30 uppercase font-mono tracking-wider">{g.genre}</span>
+                          {g.isHero && (
+                            <span className="text-[7px] font-extrabold uppercase tracking-widest bg-neon-purple/20 text-neon-purple border border-neon-purple/35 px-1 py-0.5 rounded">
+                              Hero
+                            </span>
+                          )}
+                          {g.isNew && (
+                            <span className="text-[7px] font-extrabold uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-1 py-0.5 rounded">
+                              New
+                            </span>
+                          )}
+                          {g.isHot && (
+                            <span className="text-[7px] font-extrabold uppercase tracking-widest bg-orange-500/10 text-orange-400 border border-orange-500/25 px-1 py-0.5 rounded">
+                              Hot
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0 ml-4">
+                      {/* Edit button */}
+                      <button
+                        onClick={() => handleEditSelect(g)}
+                        className={`p-2 rounded-lg transition-all ${
+                          isSelected ? "text-neon-purple bg-white/5" : "text-white/40 hover:text-white/85 hover:bg-white/[0.04]"
+                        }`}
+                        title="Edit metadata fields"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Delete button */}
+                      <button
+                        onClick={() => handleDelete(g.id)}
+                        className="p-2 rounded-lg text-red-400/50 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                        title="Delete game record"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-1 shrink-0 ml-4">
-                    {/* Edit button */}
-                    <button
-                      onClick={() => handleEditSelect(g)}
-                      className="p-2 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/[0.04] transition-all"
-                      title="Edit metadata fields"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-
-                    {/* Delete button */}
-                    <button
-                      onClick={() => handleDelete(g.id)}
-                      className="p-2 rounded-lg text-red-400/50 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                      title="Delete game record"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -419,466 +475,541 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
         <div className="lg:col-span-7">
           <form
             onSubmit={handleSave}
-            className="p-6 rounded-2xl bg-[#07070a]/60 border border-white/[0.04] backdrop-blur-xl flex flex-col gap-6"
+            className="p-6 rounded-2xl bg-[#07070a]/60 border border-white/[0.04] backdrop-blur-xl flex flex-col gap-6 shadow-2xl relative"
           >
+            {/* Visual Indicator of Edit Mode vs Create Mode */}
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.05]">
-              <h2 className="text-sm font-heading font-black uppercase tracking-wider flex items-center gap-2">
-                <Plus className="w-4 h-4 text-electric-blue" />
-                {editingGame ? `Edit Game: ${editingGame.title}` : "Upload New Game Entry"}
-              </h2>
+              <div className="flex items-center gap-2.5">
+                <div className={`w-2.5 h-2.5 rounded-full animate-pulse ${editingGame ? "bg-neon-purple shadow-[0_0_8px_rgba(168,85,247,0.8)]" : "bg-electric-blue shadow-[0_0_8px_rgba(99,102,241,0.8)]"}`} />
+                <h2 className="text-sm font-heading font-black uppercase tracking-wider flex items-center gap-2">
+                  {editingGame ? (
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-purple to-neon-pink">
+                      EDITING: {editingGame.title}
+                    </span>
+                  ) : (
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-electric-blue to-neon-cyan">
+                      CREATE GAME PROFILE
+                    </span>
+                  )}
+                </h2>
+              </div>
               {editingGame && (
                 <button
                   type="button"
                   onClick={handleResetForm}
-                  className="text-[10px] font-bold text-white/30 hover:text-white uppercase font-mono"
+                  className="text-[10px] font-bold text-white/40 hover:text-white uppercase font-mono px-2 py-1 rounded bg-white/5 border border-white/10 transition-colors cursor-pointer"
                 >
                   Cancel Edit
                 </button>
               )}
             </div>
 
-            {/* Core details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Game Title *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Pixel Drift Master"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40"
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Genre *</label>
-                <select
-                  value={genre}
-                  onChange={(e) => setGenre(e.target.value)}
-                  className="bg-[#0c0c0f] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40 text-white"
-                >
-                  {["Action", "Adventure", "Racing", "Puzzle", "Shooting", "Sports", "Strategy", "Multiplayer", "Horror", "Simulation", "RPG", "Arcade", "io", "2player", "Clicker", "Driving"].map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Developer *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Zylo Interactive"
-                  value={developer}
-                  onChange={(e) => setDeveloper(e.target.value)}
-                  className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40"
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Mock Plays Count</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 1.2M"
-                  value={plays}
-                  onChange={(e) => setPlays(e.target.value)}
-                  className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40"
-                />
-              </div>
+            {/* Premium segmented tab controllers */}
+            <div className="flex border border-white/[0.06] bg-white/[0.01] p-0.5 rounded-xl gap-1 select-none shrink-0">
+              {(["general", "media", "hosting", "addons"] as const).map((tab) => {
+                const isActive = activeTab === tab;
+                return (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab)}
+                    className={`flex-1 py-2 text-center text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all duration-355 cursor-pointer ${
+                      isActive
+                        ? "bg-[#12121a] border border-white/[0.08] text-white shadow-[0_0_12px_rgba(168,85,247,0.15)] font-black"
+                        : "text-white/40 hover:text-white/70 hover:bg-white/[0.02] border border-transparent"
+                    }`}
+                  >
+                    {tab === "general" ? "General" : tab === "media" ? "Media Assets" : tab === "hosting" ? "Hosting & Specs" : "Add-ons (FAQs)"}
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Description *</label>
-              <textarea
-                placeholder="Write a captivating synopsis..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs h-20 resize-none focus:outline-none focus:border-electric-blue/40"
-                required
-              />
-            </div>
+            {/* TAB 1: GENERAL INFO PANEL */}
+            {activeTab === "general" && (
+              <div className="flex flex-col gap-5 animate-fade-in">
+                {/* Core details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Game Title *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Pixel Drift Master"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40 text-white"
+                      required
+                    />
+                  </div>
 
-            {/* Media URLs Section */}
-            <div className="p-4 rounded-xl bg-white/[0.01] border border-white/[0.03] flex flex-col gap-4">
-              <span className="text-[11px] font-bold text-white/60 flex items-center gap-1.5 font-mono">
-                <Video className="w-3.5 h-3.5 text-electric-blue" />
-                Media URL Resource Links
-              </span>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Genre *</label>
+                    <select
+                      value={genre}
+                      onChange={(e) => setGenre(e.target.value)}
+                      className="bg-[#0c0c0f] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40 text-white cursor-pointer"
+                    >
+                      {["Action", "Adventure", "Racing", "Puzzle", "Shooting", "Sports", "Strategy", "Multiplayer", "Horror", "Simulation", "RPG", "Arcade", "io", "2player", "Clicker", "Driving"].map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Developer *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Zylo Interactive"
+                      value={developer}
+                      onChange={(e) => setDeveloper(e.target.value)}
+                      className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40 text-white"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Mock Plays Count</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 1.2M"
+                      value={plays}
+                      onChange={(e) => setPlays(e.target.value)}
+                      className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40 text-white"
+                    />
+                  </div>
+                </div>
+
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Thumbnail URL *</label>
-                  <input
-                    type="url"
-                    placeholder="https://image-source.png"
-                    value={thumbnail}
-                    onChange={(e) => setThumbnail(e.target.value)}
-                    className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40"
+                  <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Description *</label>
+                  <textarea
+                    placeholder="Write a captivating synopsis..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs h-32 resize-none focus:outline-none focus:border-electric-blue/40 text-white leading-relaxed"
                     required
                   />
                 </div>
+              </div>
+            )}
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Hero Slider Banner URL</label>
-                  <input
-                    type="url"
-                    placeholder="Fallback to Thumbnail if empty"
-                    value={banner}
-                    onChange={(e) => setBanner(e.target.value)}
-                    className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40"
-                  />
-                </div>
+            {/* TAB 2: MEDIA & ASSETS PANEL */}
+            {activeTab === "media" && (
+              <div className="flex flex-col gap-5 animate-fade-in">
+                <div className="p-4 rounded-xl bg-white/[0.01] border border-white/[0.03] flex flex-col gap-4">
+                  <span className="text-[11px] font-bold text-white/60 flex items-center gap-1.5 font-mono">
+                    <Video className="w-3.5 h-3.5 text-electric-blue" />
+                    Media URL Resource Links
+                  </span>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Hover Preview Video Review URL</label>
-                  <input
-                    type="url"
-                    placeholder="Looping silent .mp4 stream link"
-                    value={previewVideo}
-                    onChange={(e) => setPreviewVideo(e.target.value)}
-                    className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-3 md:col-span-2">
-                  <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Game Hosting Type *</label>
-                  <div className="flex bg-white/[0.02] border border-white/[0.06] rounded-xl p-1 gap-1 w-fit">
-                    <button
-                      type="button"
-                      onClick={() => setIsZipGame(false)}
-                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer ${
-                        !isZipGame
-                          ? "bg-electric-blue text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]"
-                          : "text-white/40 hover:text-white/70"
-                      }`}
-                    >
-                      Web Frame URL
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsZipGame(true)}
-                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer ${
-                        isZipGame
-                          ? "bg-neon-purple text-white shadow-[0_0_12px_rgba(168,85,247,0.25)]"
-                          : "text-white/40 hover:text-white/70"
-                      }`}
-                    >
-                      Upload ZIP Package
-                    </button>
-                  </div>
-
-                  {!isZipGame ? (
+                  <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Active Game play Iframe URL *</label>
+                      <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Thumbnail URL *</label>
                       <input
                         type="url"
-                        placeholder="e.g. https://hextris.github.io/hextris/"
-                        value={iframeUrl}
-                        onChange={(e) => setIframeUrl(e.target.value)}
-                        className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40 w-full"
-                        required={!isZipGame}
+                        placeholder="https://image-source.png"
+                        value={thumbnail}
+                        onChange={(e) => setThumbnail(e.target.value)}
+                        className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40 text-white"
+                        required
                       />
                     </div>
-                  ) : (
+
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold text-white/40 uppercase font-mono">HTML5 Game ZIP Package *</label>
-                      
-                      <div
-                        onDragOver={handleDragOver}
-                        onDragLeave={handleDragLeave}
-                        onDrop={handleDrop}
-                        onClick={() => document.getElementById("zip-file-input")?.click()}
-                        className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 relative overflow-hidden ${
-                          dragOver
-                            ? "border-neon-purple bg-neon-purple/5 shadow-[0_0_15px_rgba(184,0,255,0.15)]"
-                            : "border-white/10 bg-white/[0.01] hover:border-white/20 hover:bg-white/[0.02]"
+                      <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Hero Slider Banner URL</label>
+                      <input
+                        type="url"
+                        placeholder="Fallback to Thumbnail if empty"
+                        value={banner}
+                        onChange={(e) => setBanner(e.target.value)}
+                        className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40 text-white"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Hover Preview Video Review URL</label>
+                      <input
+                        type="url"
+                        placeholder="Looping silent .mp4 stream link"
+                        value={previewVideo}
+                        onChange={(e) => setPreviewVideo(e.target.value)}
+                        className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40 text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Instant visual thumbnail preview */}
+                {thumbnail && (
+                  <div className="p-4 rounded-xl bg-white/[0.01] border border-white/[0.03] flex items-center gap-4">
+                    <img
+                      src={thumbnail}
+                      alt="Thumbnail Preview"
+                      className="w-16 h-16 rounded-xl object-cover border border-white/10 shrink-0 shadow-md"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800";
+                      }}
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-white/80">Visual Media Live Preview</span>
+                      <span className="text-[10px] text-white/30 font-mono mt-0.5">Title card display slot configured correctly</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 3: HOSTING & SPECS PANEL */}
+            {activeTab === "hosting" && (
+              <div className="flex flex-col gap-5 animate-fade-in">
+                {/* Hosting & Iframe/Zip Selection */}
+                <div className="p-4 rounded-xl bg-white/[0.01] border border-white/[0.03] flex flex-col gap-4">
+                  <div className="flex flex-col gap-3">
+                    <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Game Hosting Type *</label>
+                    <div className="flex bg-white/[0.02] border border-white/[0.06] rounded-xl p-1 gap-1 w-fit">
+                      <button
+                        type="button"
+                        onClick={() => setIsZipGame(false)}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer ${
+                          !isZipGame
+                            ? "bg-electric-blue text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]"
+                            : "text-white/40 hover:text-white/70"
                         }`}
                       >
+                        Web Frame URL
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsZipGame(true)}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer ${
+                          isZipGame
+                            ? "bg-neon-purple text-white shadow-[0_0_12px_rgba(168,85,247,0.25)]"
+                            : "text-white/40 hover:text-white/70"
+                        }`}
+                      >
+                        Upload ZIP Package
+                      </button>
+                    </div>
+
+                    {!isZipGame ? (
+                      <div className="flex flex-col gap-1.5 mt-2">
+                        <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Active Gameplay Iframe URL *</label>
                         <input
-                          id="zip-file-input"
-                          type="file"
-                          accept=".zip"
-                          onChange={handleFileChange}
-                          className="hidden"
+                          type="url"
+                          placeholder="e.g. https://hextris.github.io/hextris/"
+                          value={iframeUrl}
+                          onChange={(e) => setIframeUrl(e.target.value)}
+                          className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40 w-full text-white"
+                          required={!isZipGame}
                         />
-                        
-                        {zipFile ? (
-                          <>
-                            <div className="w-12 h-12 rounded-xl bg-neon-purple/10 border border-neon-purple/30 flex items-center justify-center text-neon-purple shadow-[0_0_15px_rgba(184,0,255,0.2)]">
-                              <FileArchive className="w-6 h-6 animate-pulse" />
-                            </div>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-xs font-bold text-white/90 truncate max-w-[280px]">{zipFile.name}</span>
-                              <span className="text-[10px] font-mono text-white/40">{formatBytes(zipFile.size)}</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setZipFile(null);
-                              }}
-                              className="px-2.5 py-1 rounded bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 text-[10px] font-bold uppercase tracking-wider font-mono transition-colors cursor-pointer"
-                            >
-                              Remove file
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <div className={`w-12 h-12 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-white/30 transition-all ${
-                              dragOver ? "text-neon-purple border-neon-purple/30 bg-neon-purple/5" : ""
-                            }`}>
-                              <UploadCloud className="w-6 h-6 animate-bounce" />
-                            </div>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-xs font-bold text-white/70">
-                                Drag & drop your game .zip file here
-                              </span>
-                              <span className="text-[10px] text-white/30 font-mono">
-                                or click to browse local folders
-                              </span>
-                            </div>
-                            
-                            {existingZipSize && (
-                              <div className="mt-2 px-3 py-1.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 text-[10px] font-bold flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                                Active ZIP stored: {existingZipSize} (upload new to replace)
-                              </div>
-                            )}
-                          </>
-                        )}
                       </div>
+                    ) : (
+                      <div className="flex flex-col gap-1.5 mt-2">
+                        <label className="text-[10px] font-bold text-white/40 uppercase font-mono">HTML5 Game ZIP Package *</label>
+                        
+                        <div
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                          onClick={() => document.getElementById("zip-file-input")?.click()}
+                          className={`border border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 relative overflow-hidden ${
+                            dragOver
+                              ? "border-neon-purple bg-neon-purple/5 shadow-[0_0_15px_rgba(184,0,255,0.15)]"
+                              : "border-white/10 bg-white/[0.01] hover:border-white/20 hover:bg-white/[0.02]"
+                          }`}
+                        >
+                          <input
+                            id="zip-file-input"
+                            type="file"
+                            accept=".zip"
+                            onChange={handleFileChange}
+                            className="hidden"
+                          />
+                          
+                          {zipFile ? (
+                            <>
+                              <div className="w-12 h-12 rounded-xl bg-neon-purple/10 border border-neon-purple/30 flex items-center justify-center text-neon-purple shadow-[0_0_15px_rgba(184,0,255,0.2)]">
+                                <FileArchive className="w-6 h-6 animate-pulse" />
+                              </div>
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-xs font-bold text-white/90 truncate max-w-[280px]">{zipFile.name}</span>
+                                <span className="text-[10px] font-mono text-white/40">{formatBytes(zipFile.size)}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setZipFile(null);
+                                }}
+                                className="px-2.5 py-1 rounded bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 text-[10px] font-bold uppercase tracking-wider font-mono transition-colors cursor-pointer"
+                              >
+                                Remove file
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <div className={`w-12 h-12 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center text-white/30 transition-all ${
+                                dragOver ? "text-neon-purple border-neon-purple/30 bg-neon-purple/5" : ""
+                              }`}>
+                                <UploadCloud className="w-6 h-6 animate-bounce" />
+                              </div>
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-xs font-bold text-white/70">
+                                  Drag & drop your game .zip file here
+                                </span>
+                                <span className="text-[10px] text-white/30 font-mono">
+                                  or click to browse local folders
+                                </span>
+                              </div>
+                              
+                              {existingZipSize && (
+                                <div className="mt-2 px-3 py-1.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10 text-emerald-400 text-[10px] font-bold flex items-center gap-1.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                                  Active ZIP stored: {existingZipSize} (upload new to replace)
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Custom styling variables */}
+                <div className="p-4 rounded-xl bg-white/[0.01] border border-white/[0.03] flex flex-col gap-4">
+                  <span className="text-[11px] font-bold text-white/60 flex items-center gap-1.5 font-mono">
+                    <Layers className="w-3.5 h-3.5 text-neon-purple" />
+                    Custom Accent Styles & Sizing
+                  </span>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Accent Solid Hex Color</label>
+                      <input
+                        type="text"
+                        placeholder="#00f0ff"
+                        value={accentColor}
+                        onChange={(e) => setAccentColor(e.target.value)}
+                        className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40 font-mono text-white"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Hero Button Gradient</label>
+                      <input
+                        type="text"
+                        placeholder="from-[#00f0ff] to-[#b800ff]"
+                        value={buttonGradient}
+                        onChange={(e) => setButtonGradient(e.target.value)}
+                        className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40 font-mono text-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Orientation Toggles */}
+                  <div className="flex flex-col gap-2 mt-1.5 pb-2 border-b border-white/[0.04]">
+                    <label className="text-[10px] font-bold text-white/40 uppercase font-mono tracking-wider">Game Display Orientation</label>
+                    <div className="flex bg-white/[0.02] border border-white/[0.06] rounded-xl p-1 gap-1 w-fit">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsPortrait(false);
+                          setAspectRatio("16:9");
+                        }}
+                        className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer ${
+                          !isPortrait
+                            ? "bg-electric-blue text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]"
+                            : "text-white/40 hover:text-white/70"
+                        }`}
+                      >
+                        <Laptop className="w-3.5 h-3.5" />
+                        Landscape (16:9)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsPortrait(true);
+                          setAspectRatio("9:16");
+                        }}
+                        className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer ${
+                          isPortrait
+                            ? "bg-neon-purple text-white shadow-[0_0_12px_rgba(168,85,247,0.25)]"
+                            : "text-white/40 hover:text-white/70"
+                        }`}
+                      >
+                        <Smartphone className="w-3.5 h-3.5" />
+                        Portrait
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Specific Aspect Selection */}
+                  {isPortrait && (
+                    <div className="flex flex-col gap-2 mt-1 transition-all duration-300">
+                      <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Portrait Aspect Ratio Selection</label>
+                      <div className="flex bg-white/[0.02] border border-white/[0.06] rounded-xl p-1 gap-1 w-fit">
+                        {(["9:16", "3:4", "2:3"] as const).map((ratio) => (
+                          <button
+                            key={ratio}
+                            type="button"
+                            onClick={() => setAspectRatio(ratio)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-wider cursor-pointer ${
+                              aspectRatio === ratio
+                                ? "bg-neon-purple text-white shadow-[0_0_8px_rgba(168,85,247,0.2)]"
+                                : "text-white/40 hover:text-white/70"
+                            }`}
+                          >
+                            {ratio === "9:16" ? "9:16 Mobile" : ratio === "3:4" ? "3:4 Arcade" : "2:3 Compact"}
+                          </button>
+                        ))}
+                      </div>
+                      <span className="text-[9px] text-white/35 font-sans leading-relaxed">
+                        Select 3:4 for standard vertical arcade viewports (e.g. Raccoon Rescue bubble shooter) to eliminate black empty spaces.
+                      </span>
                     </div>
                   )}
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Design styles */}
-            <div className="p-4 rounded-xl bg-white/[0.01] border border-white/[0.03] flex flex-col gap-4">
-              <span className="text-[11px] font-bold text-white/60 flex items-center gap-1.5 font-mono">
-                <Layers className="w-3.5 h-3.5 text-neon-purple" />
-                Custom Accent Styles & Status
-              </span>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Accent Solid Hex Color</label>
-                  <input
-                    type="text"
-                    placeholder="#00f0ff"
-                    value={accentColor}
-                    onChange={(e) => setAccentColor(e.target.value)}
-                    className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40 font-mono"
-                  />
+            {/* TAB 4: ADD-ONS (FAQs & VIDEOS) PANEL */}
+            {activeTab === "addons" && (
+              <div className="flex flex-col gap-5 animate-fade-in">
+                {/* Status checkboxes */}
+                <div className="p-4 rounded-xl bg-white/[0.01] border border-white/[0.03] flex flex-col gap-3">
+                  <label className="text-[10px] font-bold text-white/40 uppercase font-mono tracking-wider">Release Status Tags</label>
+                  <div className="flex gap-6 mt-1 flex-wrap">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={isNew}
+                        onChange={(e) => setIsNew(e.target.checked)}
+                        className="w-4 h-4 bg-white/5 border border-white/10 rounded focus:ring-0 text-electric-blue"
+                      />
+                      <span className="text-xs font-bold text-white/70">Tag as NEW release</span>
+                    </label>
+                    
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={isHot}
+                        onChange={(e) => setIsHot(e.target.checked)}
+                        className="w-4 h-4 bg-white/5 border border-white/10 rounded focus:ring-0 text-electric-blue"
+                      />
+                      <span className="text-xs font-bold text-white/70">Tag as HOT trending item</span>
+                    </label>
+                  </div>
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Hero Button Gradient (Tailwind Class)</label>
-                  <input
-                    type="text"
-                    placeholder="from-[#00f0ff] to-[#b800ff]"
-                    value={buttonGradient}
-                    onChange={(e) => setButtonGradient(e.target.value)}
-                    className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40 font-mono"
-                  />
-                </div>
-              </div>
+                {/* FAQ list manager */}
+                <div className="p-4 rounded-xl bg-white/[0.01] border border-white/[0.03] flex flex-col gap-4">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-white/[0.03]">
+                    <span className="text-[11px] font-bold text-white/60 flex items-center gap-1.5 font-mono">
+                      <HelpCircle className="w-3.5 h-3.5 text-amber-500" />
+                      Dynamic FAQs Builder
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleAddFAQ}
+                      className="px-2.5 py-1 rounded bg-electric-blue/10 border border-electric-blue/20 hover:bg-electric-blue/20 text-[10px] font-bold text-electric-blue transition-colors font-mono cursor-pointer"
+                    >
+                      + Add FAQ
+                    </button>
+                  </div>
 
-              {/* Game Orientation Picker */}
-              <div className="flex flex-col gap-2 mt-1 pb-3 border-b border-white/[0.04]">
-                <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Game Display Orientation</label>
-                <div className="flex bg-white/[0.02] border border-white/[0.06] rounded-xl p-1 gap-1 w-fit">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsPortrait(false);
-                      setAspectRatio("16:9");
-                    }}
-                    className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer ${
-                      !isPortrait
-                        ? "bg-electric-blue text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]"
-                        : "text-white/40 hover:text-white/70"
-                    }`}
-                  >
-                    <Laptop className="w-3.5 h-3.5" />
-                    Landscape (16:9)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsPortrait(true);
-                      setAspectRatio("9:16");
-                    }}
-                    className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer ${
-                      isPortrait
-                        ? "bg-neon-purple text-white shadow-[0_0_12px_rgba(168,85,247,0.25)]"
-                        : "text-white/40 hover:text-white/70"
-                    }`}
-                  >
-                    <Smartphone className="w-3.5 h-3.5" />
-                    Portrait
-                  </button>
-                </div>
-              </div>
-
-              {/* Specific Portrait Aspect Ratio Selector (only shown if isPortrait is true) */}
-              {isPortrait && (
-                <div className="flex flex-col gap-2 mt-1 pb-3 border-b border-white/[0.04] transition-all duration-300">
-                  <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Portrait Aspect Ratio Selection</label>
-                  <div className="flex bg-white/[0.02] border border-white/[0.06] rounded-xl p-1 gap-1 w-fit">
-                    {(["9:16", "3:4", "2:3"] as const).map((ratio) => (
-                      <button
-                        key={ratio}
-                        type="button"
-                        onClick={() => setAspectRatio(ratio)}
-                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-wider cursor-pointer ${
-                          aspectRatio === ratio
-                            ? "bg-neon-purple text-white shadow-[0_0_8px_rgba(168,85,247,0.2)]"
-                            : "text-white/40 hover:text-white/70"
-                        }`}
-                      >
-                        {ratio === "9:16" ? "9:16 (Tall Mobile)" : ratio === "3:4" ? "3:4 (Tablet/Arcade)" : "2:3 (Compact)"}
-                      </button>
+                  <div className="flex flex-col gap-4 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
+                    {faqs.map((faq, idx) => (
+                      <div key={idx} className="p-3 rounded-lg bg-white/[0.01] border border-white/[0.04] flex flex-col gap-2 relative">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFAQ(idx)}
+                          className="absolute top-2 right-2 p-1 text-white/20 hover:text-red-400 hover:bg-red-500/10 rounded transition-all cursor-pointer"
+                          title="Remove this FAQ item"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        
+                        <div className="flex flex-col gap-1 pr-6">
+                          <input
+                            type="text"
+                            placeholder="FAQ Question..."
+                            value={faq.question}
+                            onChange={(e) => handleFAQChange(idx, "question", e.target.value)}
+                            className="bg-white/[0.03] border border-white/[0.06] rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-electric-blue/30 font-semibold text-white"
+                            required
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <textarea
+                            placeholder="FAQ Answer details..."
+                            value={faq.answer}
+                            onChange={(e) => handleFAQChange(idx, "answer", e.target.value)}
+                            className="bg-white/[0.02] border border-white/[0.06] rounded px-2.5 py-1.5 text-xs h-14 resize-none focus:outline-none focus:border-electric-blue/30 text-white/60"
+                            required
+                          />
+                        </div>
+                      </div>
                     ))}
                   </div>
-                  <span className="text-[9px] text-white/35 font-sans leading-relaxed">
-                    Choose 3:4 or 2:3 to resolve empty black space at the bottom of standard vertical arcade games (e.g. Raccoon Rescue bubble shooter).
-                  </span>
                 </div>
-              )}
 
-              {/* Status checkboxes */}
-              <div className="flex gap-6 mt-1.5">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={isNew}
-                    onChange={(e) => setIsNew(e.target.checked)}
-                    className="w-4 h-4 bg-white/5 border border-white/10 rounded focus:ring-0 text-electric-blue"
-                  />
-                  <span className="text-xs font-bold text-white/70">Tag as NEW release release</span>
-                </label>
-                
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={isHot}
-                    onChange={(e) => setIsHot(e.target.checked)}
-                    className="w-4 h-4 bg-white/5 border border-white/10 rounded focus:ring-0 text-electric-blue"
-                  />
-                  <span className="text-xs font-bold text-white/70">Tag as HOT trending item</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Dynamic FAQs Section */}
-            <div className="p-4 rounded-xl bg-white/[0.01] border border-white/[0.03] flex flex-col gap-4">
-              <div className="flex items-center justify-between pb-1.5 border-b border-white/[0.03]">
-                <span className="text-[11px] font-bold text-white/60 flex items-center gap-1.5 font-mono">
-                  <HelpCircle className="w-3.5 h-3.5 text-amber-500" />
-                  Dynamic FAQs builder
-                </span>
-                <button
-                  type="button"
-                  onClick={handleAddFAQ}
-                  className="px-2 py-1 rounded bg-electric-blue/10 border border-electric-blue/20 hover:bg-electric-blue/20 text-[10px] font-bold text-electric-blue transition-colors font-mono"
-                >
-                  + Add FAQ
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-4">
-                {faqs.map((faq, idx) => (
-                  <div key={idx} className="p-3 rounded-lg bg-white/[0.01] border border-white/[0.04] flex flex-col gap-2 relative">
+                {/* Gameplay videos list manager */}
+                <div className="p-4 rounded-xl bg-white/[0.01] border border-white/[0.03] flex flex-col gap-4">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-white/[0.03]">
+                    <span className="text-[11px] font-bold text-white/60 flex items-center gap-1.5 font-mono">
+                      <Video className="w-3.5 h-3.5 text-red-500" />
+                      Gameplay Walkthrough Video Links
+                    </span>
                     <button
                       type="button"
-                      onClick={() => handleRemoveFAQ(idx)}
-                      className="absolute top-2 right-2 p-1 text-white/20 hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
-                      title="Remove this FAQ item"
+                      onClick={handleAddVideo}
+                      className="px-2.5 py-1 rounded bg-electric-blue/10 border border-electric-blue/20 hover:bg-electric-blue/20 text-[10px] font-bold text-electric-blue transition-colors font-mono cursor-pointer"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      + Add Video Link
                     </button>
-                    
-                    <div className="flex flex-col gap-1 pr-6">
-                      <input
-                        type="text"
-                        placeholder="FAQ Question..."
-                        value={faq.question}
-                        onChange={(e) => handleFAQChange(idx, "question", e.target.value)}
-                        className="bg-white/[0.03] border border-white/[0.06] rounded px-2.5 py-1.5 text-xs focus:outline-none focus:border-electric-blue/30 font-semibold"
-                        required
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <textarea
-                        placeholder="FAQ Answer details..."
-                        value={faq.answer}
-                        onChange={(e) => handleFAQChange(idx, "answer", e.target.value)}
-                        className="bg-white/[0.02] border border-white/[0.06] rounded px-2.5 py-1.5 text-xs h-14 resize-none focus:outline-none focus:border-electric-blue/30 text-white/60"
-                        required
-                      />
-                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            {/* Dynamic Walkthrough Video Section */}
-            <div className="p-4 rounded-xl bg-white/[0.01] border border-white/[0.03] flex flex-col gap-4">
-              <div className="flex items-center justify-between pb-1.5 border-b border-white/[0.03]">
-                <span className="text-[11px] font-bold text-white/60 flex items-center gap-1.5 font-mono">
-                  <Video className="w-3.5 h-3.5 text-red-500" />
-                  Gameplay Walkthrough Video Links
-                </span>
-                <button
-                  type="button"
-                  onClick={handleAddVideo}
-                  className="px-2 py-1 rounded bg-electric-blue/10 border border-electric-blue/20 hover:bg-electric-blue/20 text-[10px] font-bold text-electric-blue transition-colors font-mono"
-                >
-                  + Add Walkthrough Video
-                </button>
-              </div>
+                  <div className="flex flex-col gap-3 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
+                    {gameplayVideos.map((vid, idx) => (
+                      <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end p-3 rounded-lg bg-white/[0.01] border border-white/[0.04] relative">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveVideo(idx)}
+                          className="absolute top-2 right-2 p-1 text-white/20 hover:text-red-400 hover:bg-red-500/10 rounded transition-all cursor-pointer"
+                          title="Remove this video item"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
 
-              <div className="flex flex-col gap-3">
-                {gameplayVideos.map((vid, idx) => (
-                  <div key={idx} className="grid grid-cols-1 md:grid-cols-2 gap-3 items-end p-3 rounded-lg bg-white/[0.01] border border-white/[0.04] relative">
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveVideo(idx)}
-                      className="absolute top-2 right-2 p-1 text-white/20 hover:text-red-400 hover:bg-red-500/10 rounded transition-all"
-                      title="Remove this video item"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                        <div className="flex flex-col gap-1.5 pr-6">
+                          <label className="text-[9px] font-bold text-white/30 uppercase font-mono">Video Title</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Pro Gameplay Tips"
+                            value={vid.title}
+                            onChange={(e) => handleVideoChange(idx, "title", e.target.value)}
+                            className="bg-white/[0.03] border border-white/[0.06] rounded px-2.5 py-1.5 text-xs focus:outline-none text-white"
+                            required
+                          />
+                        </div>
 
-                    <div className="flex flex-col gap-1.5 pr-6">
-                      <label className="text-[9px] font-bold text-white/30 uppercase font-mono">Video Title</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Pro Gameplay Tips"
-                        value={vid.title}
-                        onChange={(e) => handleVideoChange(idx, "title", e.target.value)}
-                        className="bg-white/[0.03] border border-white/[0.06] rounded px-2.5 py-1.5 text-xs focus:outline-none"
-                        required
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[9px] font-bold text-white/30 uppercase font-mono">Embed Video URL</label>
-                      <input
-                        type="url"
-                        placeholder="e.g. https://www.youtube.com/embed/n305c4xQ27Y"
-                        value={vid.videoUrl}
-                        onChange={(e) => handleVideoChange(idx, "videoUrl", e.target.value)}
-                        className="bg-white/[0.03] border border-white/[0.06] rounded px-2.5 py-1.5 text-xs focus:outline-none"
-                        required
-                      />
-                    </div>
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[9px] font-bold text-white/30 uppercase font-mono">Embed Video URL</label>
+                          <input
+                            type="url"
+                            placeholder="e.g. https://www.youtube.com/embed/n305c4xQ27Y"
+                            value={vid.videoUrl}
+                            onChange={(e) => handleVideoChange(idx, "videoUrl", e.target.value)}
+                            className="bg-white/[0.03] border border-white/[0.06] rounded px-2.5 py-1.5 text-xs focus:outline-none text-white"
+                            required
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Actions Submit */}
             <div className="flex items-center justify-end gap-3 mt-4">
