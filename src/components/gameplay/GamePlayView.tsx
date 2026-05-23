@@ -297,7 +297,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   let modifiedHtml = html;
                   for (const [relativePath, blobUrl] of Object.entries(pathMap)) {
                     const escapedPath = relativePath.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\\\$&");
-                    const attrRegex = new RegExp('(src|href|value|data)\\\\s*=\\\\s*(["\']?)(\\\\.\\\\/|\\\\/)?' + escapedPath + '(\\\\?[^"\' >\\\\s]*)?(#[^"\' >\\\\s]*)?\\\\2', 'gi');
+                    const attrRegex = new RegExp('(src|href|value|data)\\\\s*=\\\\s*(["\\\']?)(\\\\.\\\\/|\\\\/)?' + escapedPath + '(\\\\?[^"\\\'>\\\\s]*)?(#[^"\\\'>\\\\s]*)?\\\\2', 'gi');
                     modifiedHtml = modifiedHtml.replace(attrRegex, '$1="' + blobUrl + '"');
                   }
                   return originalWrite.call(this, modifiedHtml);
@@ -311,7 +311,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   let modifiedHtml = html;
                   for (const [relativePath, blobUrl] of Object.entries(pathMap)) {
                     const escapedPath = relativePath.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\\\$&");
-                    const attrRegex = new RegExp('(src|href|value|data)\\\\s*=\\\\s*(["\']?)(\\\\.\\\\/|\\\\/)?' + escapedPath + '(\\\\?[^"\' >\\\\s]*)?(#[^"\' >\\\\s]*)?\\\\2', 'gi');
+                    const attrRegex = new RegExp('(src|href|value|data)\\\\s*=\\\\s*(["\\\']?)(\\\\.\\\\/|\\\\/)?' + escapedPath + '(\\\\?[^"\\\'>\\\\s]*)?(#[^"\\\'>\\\\s]*)?\\\\2', 'gi');
                     modifiedHtml = modifiedHtml.replace(attrRegex, '$1="' + blobUrl + '"');
                   }
                   return originalWriteln.call(this, modifiedHtml);
