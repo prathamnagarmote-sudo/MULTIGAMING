@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Home as HomeIcon, Settings } from "lucide-react";
 import { LoadingScreen } from "@/components/loading/LoadingScreen";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
@@ -21,7 +22,46 @@ export default function Home() {
   // Safely seed and load localStorage database on mount (client-side only)
   useEffect(() => {
     setGames(getGamesDB());
+
+    // Restore view and game states from URL parameters on page refresh
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get("view");
+      const gameParam = params.get("game");
+      
+      if (viewParam === "admin") {
+        setActiveView("admin");
+        setActiveGameId(null);
+      } else if (gameParam) {
+        setActiveView("play");
+        setActiveGameId(gameParam);
+      } else if (viewParam === "home") {
+        setActiveView("home");
+        setActiveGameId(null);
+      }
+    }
   }, []);
+
+  // Persist view and game states to URL query parameters dynamically
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (activeView === "play" && activeGameId) {
+        params.set("game", activeGameId);
+        params.delete("view");
+      } else if (activeView === "admin") {
+        params.set("view", "admin");
+        params.delete("game");
+      } else {
+        params.delete("view");
+        params.delete("game");
+      }
+      
+      const newQuery = params.toString();
+      const newUrl = window.location.pathname + (newQuery ? `?${newQuery}` : "");
+      window.history.replaceState(null, "", newUrl);
+    }
+  }, [activeView, activeGameId]);
 
   const refreshGames = () => {
     setGames(getGamesDB());
@@ -109,7 +149,7 @@ export default function Home() {
         />
 
         {/* Content offset by sidebar */}
-        <div className="pl-[72px] min-h-screen flex flex-col">
+        <div className="md:pl-[72px] min-h-screen flex flex-col">
           {/* Sticky top bar */}
           <TopBar
             currentView={activeView}
@@ -121,7 +161,7 @@ export default function Home() {
           />
 
           {/* Page content */}
-          <main className="px-6 pt-6 pb-20 flex-1">
+          <main className="px-3 sm:px-4 md:px-6 pt-4 md:pt-6 pb-24 md:pb-20 flex-1">
             {activeView === "home" && (
               <>
                 {/* Featured hero banner */}
@@ -204,6 +244,41 @@ export default function Home() {
             )}
           </main>
         </div>
+
+        {/* Mobile Bottom Navigation Bar */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#030303]/95 backdrop-blur-2xl border-t border-white/[0.08] flex items-center justify-around px-2 py-1.5 safe-bottom">
+          <button
+            onClick={() => {
+              setActiveView("home");
+              setActiveGameId(null);
+              refreshGames();
+            }}
+            className={`flex flex-col items-center gap-0.5 py-1.5 px-4 rounded-xl transition-all duration-200 ${
+              activeView === "home"
+                ? "text-electric-blue"
+                : "text-white/40"
+            }`}
+          >
+            <HomeIcon className="w-5 h-5" />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Home</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveView("admin");
+              setActiveGameId(null);
+              refreshGames();
+            }}
+            className={`flex flex-col items-center gap-0.5 py-1.5 px-4 rounded-xl transition-all duration-200 ${
+              activeView === "admin"
+                ? "text-neon-purple"
+                : "text-white/40"
+            }`}
+          >
+            <Settings className="w-5 h-5" />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Admin</span>
+          </button>
+        </nav>
       </div>
     </>
   );

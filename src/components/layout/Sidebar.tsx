@@ -21,14 +21,17 @@ export function Sidebar({ currentView, onChangeView }: SidebarProps) {
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`fixed left-0 top-0 bottom-0 bg-[#030303]/90 backdrop-blur-2xl border-r border-white/[0.06] z-50 flex flex-col overflow-hidden transition-all duration-300 shadow-[10px_0_30px_rgba(0,0,0,0.3)] animate-fade-in ${
+      className={`fixed left-0 top-0 bottom-0 bg-[#030303]/90 backdrop-blur-2xl border-r border-white/[0.06] z-50 hidden md:flex flex-col overflow-hidden transition-all duration-300 shadow-[10px_0_30px_rgba(0,0,0,0.3)] animate-fade-in ${
         isHovered ? "w-[240px]" : "w-[72px]"
       }`}
     >
       {/* Logo */}
-      <div className={`py-5 flex items-center border-b border-white/[0.06] transition-all duration-300 ${
-        isHovered ? "px-5 gap-3" : "justify-center px-0"
-      }`}>
+      <div 
+        onClick={() => onChangeView("home")}
+        className={`py-5 flex items-center border-b border-white/[0.06] transition-all duration-300 cursor-pointer hover:brightness-110 active:scale-[0.98] ${
+          isHovered ? "px-5 gap-3" : "justify-center px-0"
+        }`}
+      >
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-electric-blue to-neon-purple flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.3)] shrink-0">
           <Gamepad2 className="w-5 h-5 text-white" />
         </div>

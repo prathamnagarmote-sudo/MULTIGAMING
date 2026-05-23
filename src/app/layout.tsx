@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Orbitron } from "next/font/google";
 import "./globals.css";
 
@@ -15,6 +15,14 @@ const orbitron = Orbitron({
 export const metadata: Metadata = {
   title: "ZyloGames | Next-Gen Gaming Platform",
   description: "Discover, compete, stream, and play in the ultimate gaming universe. ZyloGames — Play Anything, Anywhere.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#08080c",
 };
 
 export default function RootLayout({

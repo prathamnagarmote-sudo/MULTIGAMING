@@ -166,3 +166,27 @@
 html {
   scroll-behavior: smooth;
 }
+
+/* iOS safe area support for bottom nav */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Touch-friendly tap highlights for mobile */
+@media (pointer: coarse) {
+  button, a, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+}
+
+/* Prevent overscroll bounce on iOS */
+html, body {
+  overscroll-behavior: none;
+}
+
+/* Game iframe touch handling */
+iframe {
+  touch-action: auto;
+  -webkit-overflow-scrolling: touch;
+}

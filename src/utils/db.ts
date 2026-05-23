@@ -16,6 +16,7 @@ export interface GameData {
   slug: string;
   thumbnail: string;
   banner: string;
+  portraitBackground?: string; // Specific background for portrait games in fullscreen
   previewVideo?: string;
   genre: string;
   tags: string[];

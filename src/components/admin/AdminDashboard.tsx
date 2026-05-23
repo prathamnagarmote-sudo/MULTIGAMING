@@ -50,6 +50,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
   const [description, setDescription] = useState("");
   const [thumbnail, setThumbnail] = useState("");
   const [banner, setBanner] = useState("");
+  const [portraitBackground, setPortraitBackground] = useState("");
   const [previewVideo, setPreviewVideo] = useState("");
   const [iframeUrl, setIframeUrl] = useState("");
   const [accentColor, setAccentColor] = useState("#00f0ff");
@@ -139,6 +140,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
     setDescription(game.description);
     setThumbnail(game.thumbnail);
     setBanner(game.banner || game.thumbnail);
+    setPortraitBackground(game.portraitBackground || "");
     setPreviewVideo(game.previewVideo || "");
     setIframeUrl(game.iframeUrl);
     setAccentColor(game.accentColor || "#00f0ff");
@@ -165,6 +167,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
     setDescription("");
     setThumbnail("");
     setBanner("");
+    setPortraitBackground("");
     setPreviewVideo("");
     setIframeUrl("");
     setAccentColor("#00f0ff");
@@ -211,6 +214,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
       description,
       thumbnail,
       banner: banner || thumbnail,
+      portraitBackground: portraitBackground || undefined,
       previewVideo: previewVideo || undefined,
       iframeUrl: isZipGame ? "zip://local" : iframeUrl,
       isZipGame,
@@ -632,6 +636,17 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
                         placeholder="Looping silent .mp4 stream link"
                         value={previewVideo}
                         onChange={(e) => setPreviewVideo(e.target.value)}
+                        className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40 text-white"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Portrait Background URL (Optional)</label>
+                      <input
+                        type="url"
+                        placeholder="https://... (High-res background for portrait games)"
+                        value={portraitBackground}
+                        onChange={(e) => setPortraitBackground(e.target.value)}
                         className="bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-electric-blue/40 text-white"
                       />
                     </div>
