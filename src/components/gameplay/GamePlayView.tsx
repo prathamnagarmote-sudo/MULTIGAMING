@@ -254,39 +254,60 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               try {
                 const OriginalURL = window.URL;
                 window.URL = function(url, base) {
-                  // If called with a relative path, try resolving through pathMap first
                   if (typeof url === 'string') {
+                    // 1. Direct pathMap lookup on the raw url
                     var resolved = resolvePath(url);
                     if (resolved !== url) {
-                      // We found it in pathMap, return a URL pointing to the blob
                       return new OriginalURL(resolved);
                     }
-                    // If a base is provided and it's a blob URL, try resolving
-                    // the relative path against our pathMap
-                    if (base) {
-                      var baseStr = typeof base === 'string' ? base : base.toString();
-                      // Try to combine base + url into a relative path for lookup
-                      if (baseStr.startsWith('blob:')) {
-                        // Strip everything to get just the relative part
-                        var combined = url.replace(/^\\.\\//,'');
-                        var resolvedCombined = resolvePath(combined);
-                        if (resolvedCombined !== combined) {
-                          return new OriginalURL(resolvedCombined);
+                    // 2. Strip ./ prefix and try again
+                    var stripped = url.replace(/^\\.\\//,'');
+                    if (stripped !== url) {
+                      var resolvedStripped = resolvePath(stripped);
+                      if (resolvedStripped !== stripped) {
+                        return new OriginalURL(resolvedStripped);
+                      }
+                    }
+                    // 3. Try just the filename for deep paths
+                    var parts = stripped.split('/');
+                    if (parts.length > 1) {
+                      var filename = parts[parts.length - 1];
+                      for (var key in pathMap) {
+                        if (key.endsWith('/' + stripped) || key === stripped) {
+                          return new OriginalURL(pathMap[key]);
                         }
                       }
                     }
                   }
-                  // Fall through to original constructor
-                  if (base !== undefined) {
-                    return new OriginalURL(url, base);
+                  // Fall through to original constructor — wrapped in try-catch
+                  // because blob: URLs are not valid bases for relative URL resolution
+                  try {
+                    if (base !== undefined) {
+                      return new OriginalURL(url, base);
+                    }
+                    return new OriginalURL(url);
+                  } catch(e) {
+                    // If base was a blob URL that caused the error, try with http origin
+                    if (base) {
+                      try {
+                        var origin = window.location.origin || 'http://localhost:3000';
+                        return new OriginalURL(url, origin);
+                      } catch(e2) {}
+                    }
+                    // Last resort: log and construct a best-effort URL
+                    console.warn('[ZyloSandbox] URL construction failed for:', url, 'base:', base);
+                    try {
+                      return new OriginalURL('about:blank');
+                    } catch(e3) {
+                      throw e; // rethrow original if nothing works
+                    }
                   }
-                  return new OriginalURL(url);
                 };
                 // Preserve static methods and prototype
                 window.URL.prototype = OriginalURL.prototype;
                 window.URL.createObjectURL = OriginalURL.createObjectURL;
                 window.URL.revokeObjectURL = OriginalURL.revokeObjectURL;
-                window.URL.canParse = OriginalURL.canParse;
+                if (OriginalURL.canParse) window.URL.canParse = OriginalURL.canParse;
               } catch(e) {
                 console.warn('Failed to override URL constructor', e);
               }
