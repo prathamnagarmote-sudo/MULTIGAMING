@@ -54,7 +54,7 @@ export function FeaturedGames() {
             Featured Games
           </h3>
         </motion.div>
-        <button className="hidden md:block text-sm font-bold text-white/50 hover:text-white uppercase tracking-wider transition-colors border-b border-transparent hover:border-electric-blue pb-1">
+        <button className="text-sm font-bold text-white/50 hover:text-white uppercase tracking-wider transition-colors border-b border-transparent hover:border-electric-blue pb-1">
           View All
         </button>
       </div>

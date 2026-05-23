@@ -14,9 +14,9 @@ export function TopBar({ currentView, onNavigate }: TopBarProps) {
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="sticky top-0 z-50 h-14 md:h-16 bg-[#030303]/60 backdrop-blur-2xl border-b border-white/[0.06] flex items-center justify-between px-3 md:px-6"
+      className="sticky top-0 z-40 h-14 md:h-16 bg-[#030303]/60 backdrop-blur-2xl border-b border-white/[0.06] flex items-center justify-between px-3 md:px-6"
     >
-      {/* Left: Mobile Logo + Live badge */}
+      {/* Left: Mobile Logo */}
       <div className="flex items-center gap-3">
         {/* Mobile-only logo (sidebar is hidden on mobile) */}
         <button
@@ -30,16 +30,15 @@ export function TopBar({ currentView, onNavigate }: TopBarProps) {
             Zylo
           </span>
         </button>
-
-        {/* Live badge */}
-        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">14.2K Online</span>
-        </div>
       </div>
 
-      {/* Center: Brand Tagline Status Panel */}
+      {/* Center: Brand Tagline & Live Badge */}
       <div className="hidden xl:flex items-center gap-1.5 font-heading font-black text-sm uppercase tracking-wider text-white border-x border-white/10 px-6 h-8 select-none">
+        {/* Live badge */}
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 mr-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">14.2K Online</span>
+        </div>
         Play{" "}
         <span className="text-transparent bg-clip-text bg-gradient-to-r from-electric-blue to-neon-cyan">
           Anything
@@ -47,6 +46,10 @@ export function TopBar({ currentView, onNavigate }: TopBarProps) {
         ,{" "}
         <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-purple to-neon-pink">
           Anywhere
+        </span>
+        ,{" "}
+        <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
+          Anytime
         </span>
       </div>
 
