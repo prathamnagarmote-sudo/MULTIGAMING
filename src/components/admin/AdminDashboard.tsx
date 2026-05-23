@@ -57,6 +57,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
   const [isHot, setIsHot] = useState(false);
   const [plays, setPlays] = useState("100K");
   const [isPortrait, setIsPortrait] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16" | "3:4" | "2:3">("16:9");
 
   // ZIP Upload States
   const [isZipGame, setIsZipGame] = useState(false);
@@ -143,6 +144,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
     setIsHot(!!game.isHot);
     setPlays(game.plays || "100K");
     setIsPortrait(!!game.isPortrait);
+    setAspectRatio(game.aspectRatio || (game.isPortrait ? "9:16" : "16:9"));
     setFaqs(game.faqs || []);
     setGameplayVideos(game.gameplayVideos || []);
     
@@ -168,6 +170,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
     setIsHot(false);
     setPlays("100K");
     setIsPortrait(false);
+    setAspectRatio("16:9");
     setFaqs([{ question: "Is this game free to play?", answer: "Yes, it is 100% free." }]);
     setGameplayVideos([{ title: "Official Walkthrough", videoUrl: "https://www.youtube.com/embed/n305c4xQ27Y" }]);
     setErrorMessage(null);
@@ -215,6 +218,7 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
       isHot,
       plays,
       isPortrait,
+      aspectRatio,
       faqs,
       gameplayVideos,
       rating: editingGame ? editingGame.rating : 5.0,
@@ -687,7 +691,10 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
                 <div className="flex bg-white/[0.02] border border-white/[0.06] rounded-xl p-1 gap-1 w-fit">
                   <button
                     type="button"
-                    onClick={() => setIsPortrait(false)}
+                    onClick={() => {
+                      setIsPortrait(false);
+                      setAspectRatio("16:9");
+                    }}
                     className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer ${
                       !isPortrait
                         ? "bg-electric-blue text-white shadow-[0_0_12px_rgba(99,102,241,0.25)]"
@@ -699,7 +706,10 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsPortrait(true)}
+                    onClick={() => {
+                      setIsPortrait(true);
+                      setAspectRatio("9:16");
+                    }}
                     className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-bold transition-all uppercase tracking-wider cursor-pointer ${
                       isPortrait
                         ? "bg-neon-purple text-white shadow-[0_0_12px_rgba(168,85,247,0.25)]"
@@ -707,10 +717,36 @@ export function AdminDashboard({ onBackToHome }: AdminDashboardProps) {
                     }`}
                   >
                     <Smartphone className="w-3.5 h-3.5" />
-                    Portrait (9:16)
+                    Portrait
                   </button>
                 </div>
               </div>
+
+              {/* Specific Portrait Aspect Ratio Selector (only shown if isPortrait is true) */}
+              {isPortrait && (
+                <div className="flex flex-col gap-2 mt-1 pb-3 border-b border-white/[0.04] transition-all duration-300">
+                  <label className="text-[10px] font-bold text-white/40 uppercase font-mono">Portrait Aspect Ratio Selection</label>
+                  <div className="flex bg-white/[0.02] border border-white/[0.06] rounded-xl p-1 gap-1 w-fit">
+                    {(["9:16", "3:4", "2:3"] as const).map((ratio) => (
+                      <button
+                        key={ratio}
+                        type="button"
+                        onClick={() => setAspectRatio(ratio)}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-wider cursor-pointer ${
+                          aspectRatio === ratio
+                            ? "bg-neon-purple text-white shadow-[0_0_8px_rgba(168,85,247,0.2)]"
+                            : "text-white/40 hover:text-white/70"
+                        }`}
+                      >
+                        {ratio === "9:16" ? "9:16 (Tall Mobile)" : ratio === "3:4" ? "3:4 (Tablet/Arcade)" : "2:3 (Compact)"}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-[9px] text-white/35 font-sans leading-relaxed">
+                    Choose 3:4 or 2:3 to resolve empty black space at the bottom of standard vertical arcade games (e.g. Raccoon Rescue bubble shooter).
+                  </span>
+                </div>
+              )}
 
               {/* Status checkboxes */}
               <div className="flex gap-6 mt-1.5">

@@ -716,6 +716,21 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     containerRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Resolve precise aspect ratio style based on game metadata to prevent black spacing
+  const isPortraitMode = isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait;
+  const gameAspect = game.aspectRatio || (game.isPortrait ? "9:16" : "16:9");
+  
+  let aspectClass = "aspect-video"; 
+  if (isPortraitMode) {
+    if (gameAspect === "3:4") {
+      aspectClass = "aspect-[3/4]";
+    } else if (gameAspect === "2:3") {
+      aspectClass = "aspect-[2/3]";
+    } else {
+      aspectClass = "aspect-[9/16]";
+    }
+  }
+
   return (
     <div className="relative w-full text-white pb-16">
       {/* Floating Share Link Toast */}
@@ -846,10 +861,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             {/* Dynamic Iframe Viewport Frame */}
             <div 
               className={`relative bg-black transition-all duration-500 overflow-hidden z-10 ${
-                (isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait)
+                isPortraitMode
                   ? isFullscreen 
-                    ? "h-[calc(100vh-125px)] aspect-[9/16] rounded-2xl border border-white/10 shadow-2xl my-auto" 
-                    : "w-[380px] sm:w-[420px] md:w-[460px] max-w-full aspect-[9/16] mx-auto my-4 rounded-xl border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.8)]"
+                    ? `h-[calc(100vh-125px)] ${aspectClass} rounded-2xl border border-white/10 shadow-2xl my-auto` 
+                    : `w-[380px] sm:w-[420px] md:w-[460px] max-w-full ${aspectClass} mx-auto my-4 rounded-xl border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.8)]`
                   : isFullscreen
                     ? "h-[calc(100vh-125px)] aspect-video rounded-2xl border border-white/10 shadow-2xl my-auto"
                     : "w-full aspect-video"

@@ -47,6 +47,7 @@ export interface GameData {
   isZipGame?: boolean;
   zipSize?: string;
   isPortrait?: boolean;
+  aspectRatio?: "16:9" | "9:16" | "3:4" | "2:3";
 }
 
 const STORAGE_KEY = "zylo_games_db";
