@@ -811,7 +811,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             ref={playerFrameRef}
             className={`relative w-full transition-all duration-500 overflow-hidden ${
               isFullscreen 
-                ? "fixed inset-0 z-50 flex flex-col items-center justify-between p-5 bg-black" 
+                ? `fixed inset-0 z-50 flex flex-col items-center justify-center bg-black transition-all duration-300 ${
+                    isBarHidden ? "p-5" : "p-5 pb-24"
+                  }`
                 : "flex flex-col rounded-2xl border border-white/[0.08] bg-[#030303] shadow-[0_15px_40px_rgba(0,0,0,0.85)] z-20"
             }`}
           >
@@ -883,13 +885,13 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
             {/* Dynamic Iframe Viewport Frame */}
             <div 
-              className={`relative bg-black transition-all duration-500 overflow-hidden z-10 ${
+              className={`relative bg-black transition-[transform,box-shadow] duration-300 overflow-hidden z-10 ${
                 isPortraitMode
                   ? isFullscreen 
-                    ? `h-[calc(100vh-125px)] ${aspectClass} rounded-2xl border border-white/10 shadow-2xl my-auto` 
+                    ? `h-full ${aspectClass} rounded-2xl border border-white/10 shadow-2xl my-auto` 
                     : `w-[380px] sm:w-[420px] md:w-[460px] max-w-full ${aspectClass} mx-auto my-4 rounded-xl border border-white/[0.08] shadow-[0_10px_30px_rgba(0,0,0,0.8)]`
                   : isFullscreen
-                    ? "h-[calc(100vh-125px)] aspect-video rounded-2xl border border-white/10 shadow-2xl my-auto"
+                    ? "h-full aspect-video rounded-2xl border border-white/10 shadow-2xl my-auto"
                     : "w-full aspect-video"
               }`}
             >
@@ -941,8 +943,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             <div 
               className={`flex flex-wrap items-center justify-between gap-4 p-4 transition-all duration-500 z-30 ${
                 isFullscreen 
-                  ? `w-full max-w-5xl rounded-2xl bg-[#07070a]/90 backdrop-blur-xl border border-white/[0.08] shadow-[0_-10px_35px_rgba(0,0,0,0.6)] ${
-                      isBarHidden ? "translate-y-28 opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+                  ? `absolute bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-40px)] max-w-5xl rounded-2xl bg-[#07070a]/95 backdrop-blur-2xl border border-white/[0.08] shadow-[0_10px_40px_rgba(0,0,0,0.85)] ${
+                      isBarHidden ? "translate-y-36 opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
                     }`
                   : "w-full border-t border-white/[0.05] bg-[#07070a]/60 backdrop-blur-md"
               }`}
