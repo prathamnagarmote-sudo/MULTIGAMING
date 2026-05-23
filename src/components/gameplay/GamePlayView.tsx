@@ -248,6 +248,49 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 return url;
               }
 
+              // Intercept the URL constructor — game engines like Unity WebGL
+              // do new URL('./Build/game.data', window.location.href) which fails
+              // inside blob: iframes because blob URLs are not valid bases.
+              try {
+                const OriginalURL = window.URL;
+                window.URL = function(url, base) {
+                  // If called with a relative path, try resolving through pathMap first
+                  if (typeof url === 'string') {
+                    var resolved = resolvePath(url);
+                    if (resolved !== url) {
+                      // We found it in pathMap, return a URL pointing to the blob
+                      return new OriginalURL(resolved);
+                    }
+                    // If a base is provided and it's a blob URL, try resolving
+                    // the relative path against our pathMap
+                    if (base) {
+                      var baseStr = typeof base === 'string' ? base : base.toString();
+                      // Try to combine base + url into a relative path for lookup
+                      if (baseStr.startsWith('blob:')) {
+                        // Strip everything to get just the relative part
+                        var combined = url.replace(/^\\.\\//,'');
+                        var resolvedCombined = resolvePath(combined);
+                        if (resolvedCombined !== combined) {
+                          return new OriginalURL(resolvedCombined);
+                        }
+                      }
+                    }
+                  }
+                  // Fall through to original constructor
+                  if (base !== undefined) {
+                    return new OriginalURL(url, base);
+                  }
+                  return new OriginalURL(url);
+                };
+                // Preserve static methods and prototype
+                window.URL.prototype = OriginalURL.prototype;
+                window.URL.createObjectURL = OriginalURL.createObjectURL;
+                window.URL.revokeObjectURL = OriginalURL.revokeObjectURL;
+                window.URL.canParse = OriginalURL.canParse;
+              } catch(e) {
+                console.warn('Failed to override URL constructor', e);
+              }
+
               // Intercept Fetch API
               const originalFetch = window.fetch;
               window.fetch = function(input, init) {
