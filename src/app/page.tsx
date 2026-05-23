@@ -48,6 +48,42 @@ export default function Home() {
   const hotGames = games.filter((g) => g.isHot);
   const newGames = games.filter((g) => g.isNew);
 
+  // High-Octane Category Filters
+  const boardGames = games.filter(
+    (g) =>
+      g.genre.toLowerCase() === "puzzle" ||
+      g.genre.toLowerCase() === "strategy" ||
+      g.tags.some((t) => t.toLowerCase().includes("board") || t.toLowerCase().includes("puzzle"))
+  );
+
+  const shootingGames = games.filter(
+    (g) =>
+      g.genre.toLowerCase() === "shooting" ||
+      g.tags.some((t) => t.toLowerCase().includes("shooting") || t.toLowerCase().includes("fps"))
+  );
+
+  const racingGames = games.filter(
+    (g) =>
+      g.genre.toLowerCase() === "racing" ||
+      g.genre.toLowerCase() === "driving" ||
+      g.tags.some((t) => t.toLowerCase().includes("racing") || t.toLowerCase().includes("drift") || t.toLowerCase().includes("driving"))
+  );
+
+  const arcadeGames = games.filter(
+    (g) =>
+      g.genre.toLowerCase() === "arcade" ||
+      g.genre.toLowerCase() === "io" ||
+      g.genre.toLowerCase() === "clicker" ||
+      g.tags.some((t) => t.toLowerCase().includes("arcade") || t.toLowerCase().includes("casual"))
+  );
+
+  const handleExploreCategory = (categoryId: string) => {
+    const el = document.getElementById(categoryId);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   return (
     <>
       {/* Cinematic loading sequence */}
@@ -89,7 +125,7 @@ export default function Home() {
             {activeView === "home" && (
               <>
                 {/* Featured hero banner */}
-                <HeroBanner onPlayGame={handleSelectGame} />
+                <HeroBanner onPlayGame={handleSelectGame} onExploreCategory={handleExploreCategory} />
 
                 {/* Game sections */}
                 <GameGrid
@@ -100,16 +136,48 @@ export default function Home() {
                   onSelectGame={handleSelectGame}
                 />
 
-                <GameGrid
-                  title="✨ New Releases"
-                  subtitle="Fresh drops — added in the last 7 days"
-                  games={newGames}
-                  showViewAll
-                  onSelectGame={handleSelectGame}
-                />
+                <div id="board-games" className="scroll-mt-20">
+                  <GameGrid
+                    title="🧩 Board Games Universe"
+                    subtitle="Explore mind strategy, chess, and tactical logic boards"
+                    games={boardGames}
+                    showViewAll
+                    onSelectGame={handleSelectGame}
+                  />
+                </div>
+
+                <div id="shooting-games" className="scroll-mt-20">
+                  <GameGrid
+                    title="🎯 Shooting Games Arena"
+                    subtitle="FPS battles, sci-fi gunplay, and action blockbusters"
+                    games={shootingGames}
+                    showViewAll
+                    onSelectGame={handleSelectGame}
+                  />
+                </div>
 
                 {/* Animated platform stats */}
                 <StatsBar />
+
+                <div id="racing-games" className="scroll-mt-20">
+                  <GameGrid
+                    title="🏎️ Racing & Driving Collection"
+                    subtitle="High-octane speeds, drifting asphalt, and rally trials"
+                    games={racingGames}
+                    showViewAll
+                    onSelectGame={handleSelectGame}
+                  />
+                </div>
+
+                <div id="arcade-games" className="scroll-mt-20">
+                  <GameGrid
+                    title="🕹️ Arcade & Casual Games World"
+                    subtitle="Retro pixels, instant .io hits, and satisfying casual clicks"
+                    games={arcadeGames}
+                    showViewAll
+                    onSelectGame={handleSelectGame}
+                  />
+                </div>
 
                 <GameGrid
                   title="🎮 Browse All Games"

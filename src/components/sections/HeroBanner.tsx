@@ -6,37 +6,37 @@ import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 
 interface HeroBannerProps {
   onPlayGame?: (id: string) => void;
+  onExploreCategory: (categoryId: string) => void;
 }
 
 const VIBRANT_BG_IMAGES = [
   {
-    url: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1920&auto=format&fit=crop",
-    title: "UPGRADE YOUR EXPERIENCE",
-    subtitle: "ARCADE LOBBY"
+    url: "https://res.cloudinary.com/dwk1cnlw2/image/upload/v1779513910/Loom_Screenshot_2026-05-23_at_10.53.17_amw1ek.png",
+    title: "BOARD GAMES UNIVERSE",
+    subtitle: "EXPLORE MIND STRATEGY & CLASSICS",
+    targetId: "board-games"
   },
   {
-    url: "https://images.unsplash.com/photo-1614294148960-9aa740632a87?q=80&w=1920&auto=format&fit=crop",
-    title: "NEON FUTURISTIC CONSOLE",
-    subtitle: "NEXT-GEN GAMING"
+    url: "https://res.cloudinary.com/dwk1cnlw2/image/upload/v1779513656/Loom_Screenshot_2026-05-23_at_10.47.45_skvjq9.png",
+    title: "SHOOTING GAMES ARENA",
+    subtitle: "FPS, SCI-FI, & BATTLE ROYALE",
+    targetId: "shooting-games"
   },
   {
-    url: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1920&auto=format&fit=crop",
-    title: "CYBERNETIC TECH CENTRAL",
-    subtitle: "VIBRANT GEAR"
+    url: "https://res.cloudinary.com/dwk1cnlw2/image/upload/v1779513572/Loom_Screenshot_2026-05-23_at_10.49.02_jyuawt.png",
+    title: "RACING & DRIVING COLLECTION",
+    subtitle: "HIGH-OCTANE SPEED & DRIFT CHALLENGES",
+    targetId: "racing-games"
   },
   {
-    url: "https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1920&auto=format&fit=crop",
-    title: "COMMAND THE ARENA",
-    subtitle: "IMMERSE YOURSELF"
-  },
-  {
-    url: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=1920&auto=format&fit=crop",
-    title: "VIBRANT NEON ARCADE",
-    subtitle: "PLAY ANYTHING"
+    url: "https://res.cloudinary.com/dwk1cnlw2/image/upload/v1779513799/Loom_Screenshot_2026-05-23_at_10.51.31_fbmbjs.png",
+    title: "ARCADE & CASUAL GAMES WORLD",
+    subtitle: "RETRO PIXELS & INSTANT CLASSICS",
+    targetId: "arcade-games"
   }
 ];
 
-export function HeroBanner({ onPlayGame }: HeroBannerProps) {
+export function HeroBanner({ onPlayGame, onExploreCategory }: HeroBannerProps) {
   const [activeIdx, setActiveIdx] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -105,14 +105,24 @@ export function HeroBanner({ onPlayGame }: HeroBannerProps) {
           </span>
         </div>
 
-        {/* Bottom Banner Glassmorphic Label (Sleek, minimal aesthetic) */}
-        <div className="absolute bottom-6 left-6 z-20 pointer-events-none select-none flex flex-col gap-1">
-          <span className="text-[9px] font-extrabold tracking-[0.3em] text-electric-blue font-mono">
-            {activeSlide.subtitle}
-          </span>
-          <h2 className="text-xl md:text-3xl font-heading font-black text-white uppercase italic tracking-wider drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]">
-            {activeSlide.title}
-          </h2>
+        {/* Bottom Banner Glassmorphic Label & Explore Button */}
+        <div className="absolute bottom-6 left-6 z-20 flex flex-col md:flex-row md:items-end justify-between right-6 pointer-events-none gap-4">
+          <div className="flex flex-col gap-1 select-none">
+            <span className="text-[9px] font-bold tracking-[0.3em] text-electric-blue font-mono uppercase">
+              {activeSlide.subtitle}
+            </span>
+            <h2 className="text-xl md:text-3xl font-heading font-black text-white uppercase italic tracking-wider drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]">
+              {activeSlide.title}
+            </h2>
+          </div>
+          <div className="pointer-events-auto">
+            <button
+              onClick={() => onExploreCategory(activeSlide.targetId)}
+              className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-electric-blue to-neon-cyan text-white font-heading font-black text-xs uppercase tracking-widest hover:brightness-110 hover:scale-[1.03] shadow-[0_0_20px_rgba(255,0,85,0.3)] transition-all duration-300 cursor-pointer"
+            >
+              Explore Now
+            </button>
+          </div>
         </div>
 
         {/* Arrow Navigation (Fades in dynamically on hover) */}
