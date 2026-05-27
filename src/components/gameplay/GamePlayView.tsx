@@ -74,6 +74,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   // Iframe load state
   const [isIframeLoaded, setIsIframeLoaded] = useState(false);
   const objectUrlsRef = useRef<string[]>([]);
+  // Cache refs for background-prefetched ZIP — allows instant game start when user taps PLAY
+  const zipSrcdocCacheRef = useRef<string | null>(null);
+  const zipUrlCacheRef = useRef<string | null>(null);
 
   // Detect mobile once on mount (client-side only)
   useEffect(() => {
@@ -141,10 +144,15 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     setZipLoading(false);
     setZipError(null);
 
-    if (!game || !game.isZipGame || !hasStarted) return;
+    if (!game || !game.isZipGame) return;
+
+    // Reset caches for the new game
+    zipSrcdocCacheRef.current = null;
+    zipUrlCacheRef.current = null;
 
     let isSubscribed = true;
-    setZipLoading(true);
+    // Only show spinner if user already tapped PLAY — otherwise prefetch silently in background
+    if (hasStarted) setZipLoading(true);
 
     const loadAndExtractZip = async () => {
       try {
@@ -214,30 +222,29 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           return !isDir && !isMeta && name !== indexPath;
         });
 
-        for (const name of filesToExtract) {
+        // Parallelized extraction in batches of 8 — much faster than sequential on mobile
+        const BATCH_SIZE = 8;
+        for (let batchStart = 0; batchStart < filesToExtract.length; batchStart += BATCH_SIZE) {
           if (!isSubscribed) break;
-          const file = zip.files[name];
-          const mimeType = getMimeType(name);
-          const content = await file.async("blob");
-          const blob = new Blob([content], { type: mimeType });
-          const url = URL.createObjectURL(blob);
-
-          objectUrlsRef.current.push(url);
-
-          // 1. Original ZIP name reference
-          pathMap[name] = url;
-
-          // 2. Normalized path reference (forward slashes)
-          const normalized = name.replace(/\\/g, "/");
-          pathMap[normalized] = url;
-          pathMap[`./${normalized}`] = url;
-
-          // 3. Nested relative reference (if index.html is located in a subfolder)
-          if (baseDir && normalized.startsWith(baseDir)) {
-            const relativeToHtml = normalized.substring(baseDir.length);
-            pathMap[relativeToHtml] = url;
-            pathMap[`./${relativeToHtml}`] = url;
-          }
+          const batch = filesToExtract.slice(batchStart, batchStart + BATCH_SIZE);
+          await Promise.all(batch.map(async (name) => {
+            if (!isSubscribed) return;
+            const file = zip.files[name];
+            const mimeType = getMimeType(name);
+            const content = await file.async("blob");
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            objectUrlsRef.current.push(url);
+            pathMap[name] = url;
+            const normalized = name.replace(/\\/g, "/");
+            pathMap[normalized] = url;
+            pathMap[`./${normalized}`] = url;
+            if (baseDir && normalized.startsWith(baseDir)) {
+              const relativeToHtml = normalized.substring(baseDir.length);
+              pathMap[relativeToHtml] = url;
+              pathMap[`./${relativeToHtml}`] = url;
+            }
+          }));
         }
 
         if (!isSubscribed) return;
@@ -763,9 +770,12 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           // so the game assets load correctly via the injected interceptor script.
           const isMobile = window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
           if (isMobile) {
-            setZipSrcdoc(indexText);
+            zipSrcdocCacheRef.current = indexText;
+            // Only push to state if user has already tapped PLAY
+            if (hasStarted) setZipSrcdoc(indexText);
           } else {
-            setZipIframeUrl(finalUrl);
+            zipUrlCacheRef.current = finalUrl;
+            if (hasStarted) setZipIframeUrl(finalUrl);
           }
           setZipLoading(false);
         }
@@ -785,9 +795,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
       objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
       objectUrlsRef.current = [];
     };
-  // NOTE: hasStarted is a critical dependency here — on mobile, the user presses Play AFTER
-  // the game data has already loaded, so we need this effect to re-run when hasStarted flips to true.
-  }, [gameId, game?.id, hasStarted]);
+  // Removed hasStarted dep — ZIP prefetches in background as soon as game data loads.
+  // The useEffect below handles showing the prefetched result when user taps PLAY.
+  }, [gameId, game?.id]);
 
   // Handle vertical window scroll state
   useEffect(() => {
@@ -802,14 +812,23 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Safety fallback for iframe onLoad event on mobile browsers to prevent perpetual spinner
+  // When user taps PLAY: if ZIP was already prefetched, apply it instantly — zero wait!
+  useEffect(() => {
+    if (!hasStarted || !game?.isZipGame) return;
+    const mobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+    if (mobile && zipSrcdocCacheRef.current && !zipSrcdoc) {
+      setZipSrcdoc(zipSrcdocCacheRef.current);
+      setZipLoading(false);
+    } else if (!mobile && zipUrlCacheRef.current && !zipIframeUrl) {
+      setZipIframeUrl(zipUrlCacheRef.current);
+      setZipLoading(false);
+    }
+  }, [hasStarted, game?.isZipGame]);
+
+  // Safety fallback for iframe onLoad event to prevent perpetual spinner
   useEffect(() => {
     if (hasStarted) {
-      // Mobile needs longer timeout due to slower connections & srcdoc parsing time
-      const isMobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
-      const timer = setTimeout(() => {
-        setIsIframeLoaded(true);
-      }, isMobile ? 8000 : 3500);
+      const timer = setTimeout(() => setIsIframeLoaded(true), 2500);
       return () => clearTimeout(timer);
     }
   }, [hasStarted]);
