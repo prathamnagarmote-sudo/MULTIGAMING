@@ -67,6 +67,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
   // ZIP Game client runtime states
   const [zipIframeUrl, setZipIframeUrl] = useState<string | null>(null);
+  const [zipSrcdoc, setZipSrcdoc] = useState<string | null>(null);
   const [zipLoading, setZipLoading] = useState(false);
   const [zipError, setZipError] = useState<string | null>(null);
 
@@ -136,6 +137,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     objectUrlsRef.current = [];
     setZipIframeUrl(null);
+    setZipSrcdoc(null);
     setZipLoading(false);
     setZipError(null);
 
@@ -629,7 +631,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           indexText = indexText.replace(urlRegex, `url("${blobUrl}")`);
         }
 
-        // Create Blob for modified index.html
+        // Create Blob for modified index.html (used on desktop browsers)
         const indexBlob = new Blob([indexText], { type: "text/html" });
         const finalUrl = URL.createObjectURL(indexBlob);
 
@@ -647,7 +649,17 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             pathMap[`./${relativeIndex}`] = finalUrl;
           }
 
-          setZipIframeUrl(finalUrl);
+          // On mobile browsers, blob: URL iframes are blocked by the browser security model
+          // (iOS Safari and Android Chrome refuse to navigate iframes to blob: URLs from HTTPS pages).
+          // Fix: Use srcdoc to inject the HTML content directly — this works universally.
+          // The asset blob URLs are already embedded in the HTML text via pathMap replacement above,
+          // so the game assets load correctly via the injected interceptor script.
+          const isMobile = window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+          if (isMobile) {
+            setZipSrcdoc(indexText);
+          } else {
+            setZipIframeUrl(finalUrl);
+          }
           setZipLoading(false);
         }
       } catch (err: any) {
@@ -686,12 +698,25 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   // Safety fallback for iframe onLoad event on mobile browsers to prevent perpetual spinner
   useEffect(() => {
     if (hasStarted) {
+      // Mobile needs longer timeout due to slower connections & srcdoc parsing time
+      const isMobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
       const timer = setTimeout(() => {
         setIsIframeLoaded(true);
-      }, 3500);
+      }, isMobile ? 8000 : 3500);
       return () => clearTimeout(timer);
     }
   }, [hasStarted]);
+
+  // Auto-clear loading overlay when srcdoc is injected (srcdoc iframes may not fire onLoad reliably)
+  useEffect(() => {
+    if (zipSrcdoc) {
+      // Give a short delay for the browser to parse and render the srcdoc content
+      const timer = setTimeout(() => {
+        setIsIframeLoaded(true);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [zipSrcdoc]);
 
   // Handle browser fullscreen changes
   useEffect(() => {
@@ -1074,8 +1099,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 </div>
               )}
 
-              {/* Iframe Loading Overlay */}
-              {hasStarted && !isIframeLoaded && !zipLoading && !zipError && (
+              {/* Iframe Loading Overlay — hide once iframe content is confirmed ready */}
+              {hasStarted && !isIframeLoaded && !zipLoading && !zipError && !(game.isZipGame && (zipSrcdoc || zipIframeUrl)) && (
                 <div className="absolute inset-0 bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center gap-4 z-20 transition-opacity duration-500">
                   <div className="w-16 h-16 rounded-3xl border-2 border-t-electric-blue border-r-neon-purple border-b-transparent border-l-transparent animate-spin shadow-[0_0_20px_rgba(99,102,241,0.2)]" />
                   <span className="text-xs font-heading font-black tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50 animate-pulse">
@@ -1085,17 +1110,26 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               )}
 
               {hasStarted ? (
-                (!game.isZipGame || zipIframeUrl) && (
+                // For ZIP games: show iframe once srcdoc (mobile) or blobUrl (desktop) is ready
+                // For URL games: show iframe immediately once hasStarted
+                (!game.isZipGame || zipIframeUrl || zipSrcdoc) && (
                   <iframe
                     ref={iframeRef}
-                    src={game.isZipGame ? zipIframeUrl! : getSecureIframeUrl(game.iframeUrl)}
+                    {...(game.isZipGame
+                      ? zipSrcdoc
+                        // Mobile path: inject HTML directly via srcdoc (bypasses blob: URL iframe block)
+                        ? { srcdoc: zipSrcdoc }
+                        // Desktop path: use blob URL
+                        : { src: zipIframeUrl! }
+                      // URL game: use the configured iframe URL
+                      : { src: getSecureIframeUrl(game.iframeUrl) }
+                    )}
                     onLoad={() => setIsIframeLoaded(true)}
                     className="w-full h-full border-none relative z-0"
                     allow="autoplay; fullscreen; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
                     allowFullScreen
                     scrolling="no"
                     title={game.title}
-                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-top-navigation-by-user-activation allow-modals allow-downloads"
                   />
                 )
               ) : (
