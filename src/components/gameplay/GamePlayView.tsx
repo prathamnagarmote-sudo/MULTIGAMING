@@ -35,6 +35,14 @@ interface GamePlayViewProps {
   onSelectGame: (id: string) => void;
 }
 
+const getSecureIframeUrl = (url: string) => {
+  if (!url) return "";
+  if (typeof window !== "undefined" && window.location.protocol === "https:" && url.startsWith("http://")) {
+    return url.replace("http://", "https://");
+  }
+  return url;
+};
+
 export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -774,68 +782,36 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
     const isMobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
     if (isMobile) {
-      // Force virtual fullscreen fallback instantly so the exit button renders
+      // On mobile devices, we strictly use CSS virtual fullscreen (fixed inset-0 z-50 bg-black)
+      // and do NOT call the browser's buggy native fullscreen API. This prevents rendering crashes.
       setIsFullscreen(true);
-
-      const el = playerFrameRef.current as any;
-      if (el) {
-        // Attempt native fullscreen if supported
-        try {
-          if (el.requestFullscreen) {
-            await el.requestFullscreen().catch(() => {});
-          } else if (el.webkitRequestFullscreen) {
-            await el.webkitRequestFullscreen();
-          } else if (el.msRequestFullscreen) {
-            await el.msRequestFullscreen();
-          }
-        } catch (err) {
-          console.warn("Native fullscreen request failed, falling back to virtual fullscreen layout:", err);
-        }
-
-        // Attempt screen orientation lock if API exists
-        try {
-          const screenOrient = screen.orientation as any;
-          if (screenOrient && screenOrient.lock) {
-            const orientationMode = game?.isPortrait ? "portrait" : "landscape";
-            await screenOrient.lock(orientationMode).catch((err: any) => {
-              console.warn("Screen orientation lock failed:", err);
-            });
-          }
-        } catch (err) {
-          console.warn("Screen orientation lock api call failed:", err);
-        }
-      }
     }
   };
 
   const handleFullscreen = async () => {
     const el = playerFrameRef.current as any;
     if (el) {
-      try {
-        if (el.requestFullscreen) await el.requestFullscreen().catch(() => {});
-        else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
-        else if (el.msRequestFullscreen) await el.msRequestFullscreen();
-        
-        setIsFullscreen(true);
-
-        const isMobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
-        const screenOrient = screen.orientation as any;
-        if (isMobile && screenOrient && screenOrient.lock) {
-          const orientationMode = game?.isPortrait ? "portrait" : "landscape";
-          await screenOrient.lock(orientationMode).catch((err: any) => {
-            console.warn("Screen orientation lock failed:", err);
-          });
+      const isMobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
+      if (!isMobile) {
+        try {
+          if (el.requestFullscreen) await el.requestFullscreen().catch(() => {});
+          else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
+          else if (el.msRequestFullscreen) await el.msRequestFullscreen();
+        } catch (err) {
+          console.warn("Fullscreen request failed:", err);
         }
-      } catch (err) {
-        console.warn("Fullscreen request failed:", err);
       }
+      setIsFullscreen(true);
     }
   };
 
   const handleExitFullscreen = () => {
-    if (document.exitFullscreen) document.exitFullscreen().catch(() => { });
-    else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
-    else if ((document as any).msExitFullscreen) (document as any).msExitFullscreen();
+    const isMobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
+    if (!isMobile) {
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => { });
+      else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
+      else if ((document as any).msExitFullscreen) (document as any).msExitFullscreen();
+    }
   };
 
   const toggleFullscreen = () => {
@@ -970,8 +946,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               iframeRef.current.focus();
             }
           }}
-          className={`relative w-full transition-all duration-500 overflow-hidden ${isFullscreen
-            ? `fixed inset-0 z-50 flex flex-col items-center justify-center bg-black transition-all duration-300 ${isBarHidden ? "p-0" : "p-0 pb-[64px]"
+          className={`relative w-full overflow-hidden ${isFullscreen
+            ? `fixed inset-0 z-50 flex flex-col items-center justify-center bg-black ${isBarHidden ? "p-0" : "p-0 md:pb-[64px]"
             }`
             : "flex flex-col bg-[#0b0b12]/80 border-2 border-white/20 shadow-[0_25px_60px_rgba(0,0,0,0.8)] rounded-2xl z-20 overflow-hidden"
             }`}
@@ -1082,10 +1058,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 (!game.isZipGame || zipIframeUrl) && (
                   <iframe
                     ref={iframeRef}
-                    src={game.isZipGame ? zipIframeUrl! : game.iframeUrl}
+                    src={game.isZipGame ? zipIframeUrl! : getSecureIframeUrl(game.iframeUrl)}
                     onLoad={() => setIsIframeLoaded(true)}
-                    className="w-full h-full border-none relative z-0 transition-opacity duration-700 ease-in-out"
-                    style={{ opacity: isIframeLoaded ? 1 : 0 }}
+                    className="w-full h-full border-none relative z-0"
                     allow="autoplay; fullscreen; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
                     allowFullScreen
                     scrolling="no"
