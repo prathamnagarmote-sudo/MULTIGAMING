@@ -649,6 +649,16 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Safety fallback for iframe onLoad event on mobile browsers to prevent perpetual spinner
+  useEffect(() => {
+    if (hasStarted) {
+      const timer = setTimeout(() => {
+        setIsIframeLoaded(true);
+      }, 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [hasStarted]);
+
   // Handle browser fullscreen changes
   useEffect(() => {
     let escToastTimer: any;
@@ -917,10 +927,14 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
       {isFullscreen && (
         <button
           onClick={toggleFullscreen}
-          className="fixed top-2.5 right-2.5 z-[99999] flex items-center justify-center w-8 h-8 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white/90 shadow-[0_4px_12px_rgba(0,0,0,0.5)] active:scale-90 transition-all hover:scale-105 cursor-pointer select-none"
+          className={`fixed z-[99999] md:hidden flex items-center justify-center w-7 h-7 rounded-full bg-black/40 border border-white/10 text-white/80 active:scale-90 transition-all select-none cursor-pointer hover:scale-105 hover:bg-black/60 ${
+            isPortraitMode 
+              ? "top-2.5 left-2.5" 
+              : "top-2.5 left-1/2 -translate-x-1/2"
+          }`}
           title="Exit Fullscreen"
         >
-          <X className="w-4 h-4" />
+          <X className="w-3.5 h-3.5" />
         </button>
       )}
 
@@ -1206,8 +1220,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             {/* Premium Action Control Toolbar */}
             <div
               className={`flex items-center justify-between gap-4 transition-all duration-500 z-30 ${isFullscreen
-                ? `absolute bottom-0 left-0 w-full rounded-none bg-[#09090e]/95 backdrop-blur-2xl border-t border-white/[0.08] shadow-[0_-5px_30px_rgba(0,0,0,0.8)] px-4 py-3 sm:px-6 ${isBarHidden ? "translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
-                }`
+                ? `absolute bottom-0 left-0 w-full rounded-none bg-[#09090e]/95 backdrop-blur-2xl border-t border-white/[0.08] shadow-[0_-5px_30px_rgba(0,0,0,0.8)] px-4 py-3 sm:px-6 ${isBarHidden ? "translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"} hidden md:flex`
                 : "w-full bg-[#0e0e18] border-t-2 border-white/20 shadow-[0_-4px_20px_rgba(0,0,0,0.4)] px-4 py-2 sm:px-6 relative z-20"
                 }`}
             >
