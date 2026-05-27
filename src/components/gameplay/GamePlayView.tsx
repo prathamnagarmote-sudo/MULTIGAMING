@@ -51,7 +51,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const [isBarHidden, setIsBarHidden] = useState(false);
   const [isPortraitOverride, setIsPortraitOverride] = useState<boolean | null>(null);
   const [hasStarted, setHasStarted] = useState(false);
-  const [isLandscapeRotationRequired, setIsLandscapeRotationRequired] = useState(false);
 
   const [showEscToast, setShowEscToast] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
@@ -751,26 +750,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isFullscreen]);
 
-  // Handle mobile landscape physical device orientation resize & fallback rotation
-  useEffect(() => {
-    if (!isFullscreen) {
-      setIsLandscapeRotationRequired(false);
-      return;
-    }
-    const checkOrientation = () => {
-      const isMobile = window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
-      if (isMobile && !game?.isPortrait) {
-        // If holding vertically (portrait) but game is landscape, require CSS rotation fallback
-        const isDevicePortrait = window.innerHeight > window.innerWidth;
-        setIsLandscapeRotationRequired(isDevicePortrait);
-      } else {
-        setIsLandscapeRotationRequired(false);
-      }
-    };
-    checkOrientation();
-    window.addEventListener("resize", checkOrientation);
-    return () => window.removeEventListener("resize", checkOrientation);
-  }, [isFullscreen, game]);
+
 
   if (!game) return null;
 
@@ -1030,7 +1010,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             {isFullscreen && isBarHidden && (
               <div
                 onMouseEnter={() => setIsBarHidden(false)}
-                className="fixed bottom-0 left-0 right-0 h-8 z-[60] flex items-center justify-center cursor-pointer group"
+                className="fixed bottom-0 left-0 right-0 h-8 z-[60] hidden md:flex items-center justify-center cursor-pointer group"
               >
                 <button
                   onClick={() => setIsBarHidden(false)}
@@ -1045,7 +1025,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
             {/* Dynamic Iframe Viewport Frame */}
             <div
-              className={`relative overflow-hidden z-10 ${isLandscapeRotationRequired ? "rotate-landscape-mobile" : ""} ${
+              className={`relative overflow-hidden z-10 ${
                 isFullscreen
                   ? isPortraitMode
                     ? "absolute inset-0 w-full h-full max-md:aspect-none md:relative md:h-full md:w-auto md:aspect-[9/16] mx-auto flex-shrink-0 bg-black md:bg-transparent"
@@ -1230,7 +1210,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             <div
               className={`flex items-center justify-between gap-4 transition-all duration-500 z-30 ${isFullscreen
                 ? `absolute bottom-0 left-0 w-full rounded-none bg-[#09090e]/95 backdrop-blur-2xl border-t border-white/[0.08] shadow-[0_-5px_30px_rgba(0,0,0,0.8)] px-4 py-3 sm:px-6 ${isBarHidden ? "translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"} hidden md:flex`
-                : "w-full bg-[#0e0e18] border-t-2 border-white/20 shadow-[0_-4px_20px_rgba(0,0,0,0.4)] px-4 py-2 sm:px-6 relative z-20"
+                : "w-full bg-[#0e0e18] border-t-2 border-white/20 shadow-[0_-4px_20px_rgba(0,0,0,0.4)] px-4 py-2 sm:px-6 relative z-20 hidden md:flex"
                 }`}
             >
               {/* Left toolbar details */}
