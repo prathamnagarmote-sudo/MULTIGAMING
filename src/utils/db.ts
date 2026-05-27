@@ -161,16 +161,17 @@ export const saveGameZIP = async (gameId: string, zipBlob: Blob): Promise<void> 
   await uploadBytes(storageRef, zipBlob);
 };
 
-// We now fetch the ZIP file from the public UploadThing URL provided in the game data
+// We now fetch the ZIP file through our same-origin API proxy to completely bypass remote CORS blocks on mobile devices
 export const getGameZIP = async (zipUrl: string): Promise<Blob | null> => {
   try {
-    const response = await fetch(zipUrl);
+    const proxyUrl = `/api/proxy-zip?url=${encodeURIComponent(zipUrl)}`;
+    const response = await fetch(proxyUrl);
     if (!response.ok) {
-      throw new Error("Failed to fetch game ZIP from remote storage");
+      throw new Error(`Failed to fetch game ZIP from proxy: ${response.statusText}`);
     }
     return await response.blob();
   } catch (err: any) {
-    console.error("UploadThing ZIP fetch error:", err);
+    console.error("ZIP proxy fetch error:", err);
     throw err;
   }
 };
