@@ -794,8 +794,12 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
     const isMobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
     if (isMobile) {
+      // Force virtual fullscreen fallback instantly so the exit button renders
+      setIsFullscreen(true);
+
       const el = playerFrameRef.current as any;
       if (el) {
+        // Attempt native fullscreen if supported
         try {
           if (el.requestFullscreen) {
             await el.requestFullscreen().catch(() => {});
@@ -804,9 +808,12 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           } else if (el.msRequestFullscreen) {
             await el.msRequestFullscreen();
           }
-          
-          setIsFullscreen(true);
+        } catch (err) {
+          console.warn("Native fullscreen request failed, falling back to virtual fullscreen layout:", err);
+        }
 
+        // Attempt screen orientation lock if API exists
+        try {
           const screenOrient = screen.orientation as any;
           if (screenOrient && screenOrient.lock) {
             const orientationMode = game?.isPortrait ? "portrait" : "landscape";
@@ -815,7 +822,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             });
           }
         } catch (err) {
-          console.warn("Mobile fullscreen or orientation lock failed:", err);
+          console.warn("Screen orientation lock api call failed:", err);
         }
       }
     }
@@ -923,20 +930,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
         }
       `}</style>
 
-      {/* Extremely tiny, discrete exit button at the edge of the screen in fullscreen mode */}
-      {isFullscreen && (
-        <button
-          onClick={toggleFullscreen}
-          className={`fixed z-[99999] md:hidden flex items-center justify-center w-7 h-7 rounded-full bg-black/40 border border-white/10 text-white/80 active:scale-90 transition-all select-none cursor-pointer hover:scale-105 hover:bg-black/60 ${
-            isPortraitMode 
-              ? "top-2.5 left-2.5" 
-              : "top-2.5 left-1/2 -translate-x-1/2"
-          }`}
-          title="Exit Fullscreen"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
-      )}
+
 
       {/* Floating Share Link Toast */}
       <AnimatePresence>
@@ -1204,6 +1198,21 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 </div>
               )}
             </div>
+
+            {/* Extremely tiny, discrete exit button at the edge of the screen in fullscreen mode */}
+            {isFullscreen && (
+              <button
+                onClick={toggleFullscreen}
+                className={`absolute z-[99999] md:hidden flex items-center justify-center w-7 h-7 rounded-full bg-black/40 border border-white/10 text-white/80 active:scale-90 transition-all select-none cursor-pointer hover:scale-105 hover:bg-black/60 ${
+                  isPortraitMode 
+                    ? "top-2.5 left-2.5" 
+                    : "top-2.5 left-1/2 -translate-x-1/2"
+                }`}
+                title="Exit Fullscreen"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
 
             {/* Mobile Fullscreen Floating Button — always visible on touch devices */}
             {!isFullscreen && (
