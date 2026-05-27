@@ -73,7 +73,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
   // ZIP Game client runtime states
   const [zipIframeUrl, setZipIframeUrl] = useState<string | null>(null);
-  const [zipSrcdoc, setZipSrcdoc] = useState<string | null>(null);
   const [zipLoading, setZipLoading] = useState(false);
   const [zipError, setZipError] = useState<string | null>(null);
 
@@ -81,7 +80,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const [isIframeLoaded, setIsIframeLoaded] = useState(false);
   const objectUrlsRef = useRef<string[]>([]);
   // Cache refs for background-prefetched ZIP — allows instant game start when user taps PLAY
-  const zipSrcdocCacheRef = useRef<string | null>(null);
   const zipUrlCacheRef = useRef<string | null>(null);
 
   // Detect mobile once on mount (client-side only)
@@ -146,14 +144,12 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     objectUrlsRef.current = [];
     setZipIframeUrl(null);
-    setZipSrcdoc(null);
     setZipLoading(false);
     setZipError(null);
 
     if (!game || !game.isZipGame) return;
 
     // Reset caches for the new game
-    zipSrcdocCacheRef.current = null;
     zipUrlCacheRef.current = null;
 
     let isSubscribed = true;
@@ -680,7 +676,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           indexText = indexText.replace(urlRegex, `url("${blobUrl}")`);
         }
 
-        // Create Blob for modified index.html (used on desktop browsers)
+        // Create Blob for modified index.html (used universally on both desktop and mobile)
         const indexBlob = new Blob([indexText], { type: "text/html" });
         const finalUrl = URL.createObjectURL(indexBlob);
 
@@ -698,19 +694,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             pathMap[`./${relativeIndex}`] = finalUrl;
           }
 
-          // On mobile browsers, blob: URL iframes are blocked by the browser security model
-          // (iOS Safari and Android Chrome refuse to navigate iframes to blob: URLs from HTTPS pages).
-          // Fix: Use srcdoc to inject the HTML content directly — this works universally.
-          // The asset blob URLs are already embedded in the HTML text via pathMap replacement above,
-          // so the game assets load correctly via the injected interceptor script.
-          const isMobile = window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-          if (isMobile) {
-            zipSrcdocCacheRef.current = indexText;
-            // Only push to state if user has already tapped PLAY
-            if (hasStartedRef.current) setZipSrcdoc(indexText);
-          } else {
-            zipUrlCacheRef.current = finalUrl;
-            if (hasStartedRef.current) setZipIframeUrl(finalUrl);
+          // Use blob URL universally for both desktop and mobile to leverage browser same-origin caching
+          zipUrlCacheRef.current = finalUrl;
+          if (hasStartedRef.current) {
+            setZipIframeUrl(finalUrl);
           }
           setZipLoading(false);
         }
@@ -750,15 +737,11 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   // When user taps PLAY: if ZIP was already prefetched, apply it instantly — zero wait!
   useEffect(() => {
     if (!hasStarted || !game?.isZipGame) return;
-    const mobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
-    if (mobile && zipSrcdocCacheRef.current && !zipSrcdoc) {
-      setZipSrcdoc(zipSrcdocCacheRef.current);
-      setZipLoading(false);
-    } else if (!mobile && zipUrlCacheRef.current && !zipIframeUrl) {
+    if (zipUrlCacheRef.current && !zipIframeUrl) {
       setZipIframeUrl(zipUrlCacheRef.current);
       setZipLoading(false);
     }
-  }, [hasStarted, game?.isZipGame]);
+  }, [hasStarted, game?.isZipGame, zipIframeUrl]);
 
   // Listen for same-origin iframe wheel scroll events to allow seamless page scrolling when hovering the iframe
   useEffect(() => {
@@ -783,16 +766,16 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     }
   }, [hasStarted]);
 
-  // Auto-clear loading overlay when srcdoc is injected (srcdoc iframes may not fire onLoad reliably)
+  // Auto-clear loading overlay when iframe URL is injected
   useEffect(() => {
-    if (zipSrcdoc) {
+    if (zipIframeUrl) {
       // Snappy delay for modern browser mounting
       const timer = setTimeout(() => {
         setIsIframeLoaded(true);
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [zipSrcdoc]);
+  }, [zipIframeUrl]);
 
   // Handle browser fullscreen changes
   useEffect(() => {
@@ -1182,7 +1165,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               )}
 
               {/* Iframe Loading Overlay — hide once iframe content is confirmed ready */}
-              {hasStarted && !isIframeLoaded && !zipLoading && !zipError && !(game.isZipGame && (zipSrcdoc || zipIframeUrl)) && (
+              {hasStarted && !isIframeLoaded && !zipLoading && !zipError && !(game.isZipGame && zipIframeUrl) && (
                 <div className="absolute inset-0 bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center gap-4 z-20 transition-opacity duration-500">
                   <div className="w-16 h-16 rounded-3xl border-2 border-t-electric-blue border-r-neon-purple border-b-transparent border-l-transparent animate-spin shadow-[0_0_20px_rgba(99,102,241,0.2)]" />
                   <span className="text-xs font-heading font-black tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50 animate-pulse">
@@ -1192,17 +1175,13 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               )}
 
               {hasStarted ? (
-                // For ZIP games: show iframe once srcdoc (mobile) or blobUrl (desktop) is ready
+                // For ZIP games: show iframe once blobUrl is ready
                 // For URL games: show iframe immediately once hasStarted
-                (!game.isZipGame || zipIframeUrl || zipSrcdoc) && (
+                (!game.isZipGame || zipIframeUrl) && (
                   <iframe
                     ref={iframeRef}
                     {...(game.isZipGame
-                      ? zipSrcdoc
-                        // Mobile path: inject HTML directly via srcdoc (bypasses blob: URL iframe block)
-                        ? { srcdoc: zipSrcdoc }
-                        // Desktop path: use blob URL
-                        : { src: zipIframeUrl! }
+                      ? { src: zipIframeUrl! }
                       // URL game: use the configured iframe URL
                       : { src: getSecureIframeUrl(game.iframeUrl) }
                     )}
