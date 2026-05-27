@@ -1045,14 +1045,15 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
             {/* Dynamic Iframe Viewport Frame */}
             <div
-              className={`relative overflow-hidden z-10 ${isLandscapeRotationRequired ? "rotate-landscape-mobile" : ""} ${isPortraitMode
-                ? isFullscreen
-                  ? `w-full h-full md:h-full md:w-auto ${aspectClass} mx-auto flex-shrink-0 bg-transparent`
-                  : `h-[68vh] md:h-[72vh] w-auto max-w-full ${aspectClass} mx-auto flex-shrink-0 bg-transparent`
-                : isFullscreen
-                  ? "w-full h-full flex-shrink-0 bg-black"
-                  : `w-full max-w-5xl aspect-video mx-auto flex-shrink-0 bg-black rounded-xl shadow-2xl border border-white/10`
-                }`}
+              className={`relative overflow-hidden z-10 ${isLandscapeRotationRequired ? "rotate-landscape-mobile" : ""} ${
+                isFullscreen
+                  ? isPortraitMode
+                    ? "absolute inset-0 w-full h-full max-md:aspect-none md:relative md:h-full md:w-auto md:aspect-[9/16] mx-auto flex-shrink-0 bg-black md:bg-transparent"
+                    : "absolute inset-0 w-full h-full flex-shrink-0 bg-black md:relative"
+                  : isPortraitMode
+                    ? `h-[68vh] md:h-[72vh] w-auto max-w-full ${aspectClass} mx-auto flex-shrink-0 bg-transparent`
+                    : `w-full max-w-5xl aspect-video mx-auto flex-shrink-0 bg-black rounded-xl shadow-2xl border border-white/10`
+              }`}
             >
               {/* Screen static scanner overlay */}
               <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[size:100%_4px] opacity-10 pointer-events-none z-10" />
