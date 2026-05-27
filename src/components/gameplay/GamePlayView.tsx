@@ -566,26 +566,133 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           </script>
           <style id="zylo-sandbox-canvas-fix">
             html, body {
-              width: 100% !important;
-              height: 100% !important;
+              width: 100vw !important;
+              height: 100dvh !important;
               margin: 0 !important;
               padding: 0 !important;
               overflow: hidden !important;
-              background-color: transparent !important;
+              background: #000 !important;
             }
-            /* Stretch canvas to fill the viewport completely without covering loading screens */
+            /* All direct children of body fill viewport - covers most game root containers */
+            body > div, body > main, body > section, body > canvas {
+              position: absolute !important;
+              inset: 0 !important;
+              width: 100vw !important;
+              height: 100dvh !important;
+              overflow: hidden !important;
+            }
             canvas {
-              width: 100% !important;
-              height: 100% !important;
               display: block !important;
-              object-fit: fill !important;
+              max-width: 100vw !important;
+              max-height: 100dvh !important;
             }
-            /* Ensure the game container also takes full width if they use one */
-            #unity-container, #game-container, .game-container {
-              width: 100% !important;
-              height: 100% !important;
+            /* Named container IDs used by popular game engines */
+            #unity-container, #game-container, .game-container, #app, #root,
+            #phaser-game, .phaser-game, #canvas-holder, #game, #GameCanvas,
+            #GameDiv, #GameWrapper, #gamediv, #gamecanvas {
+              width: 100vw !important;
+              height: 100dvh !important;
+              position: absolute !important;
+              inset: 0 !important;
             }
           </style>
+          <script id="zylo-mobile-scaler">
+            (function() {
+              // Only run on mobile devices
+              if (!/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return;
+              
+              // Inject viewport meta if missing (some games omit it)
+              var existingMeta = document.querySelector('meta[name="viewport"]');
+              if (!existingMeta) {
+                var meta = document.createElement('meta');
+                meta.name = 'viewport';
+                meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+                document.head && document.head.appendChild(meta);
+              }
+
+              var scaled = false;
+              
+              function scaleGameToViewport() {
+                if (scaled) return;
+                var canvases = document.querySelectorAll('canvas');
+                if (canvases.length === 0) return;
+                
+                for (var i = 0; i < canvases.length; i++) {
+                  var canvas = canvases[i];
+                  // Use the canvas buffer dimensions (set by the game engine)
+                  var naturalW = canvas.width;
+                  var naturalH = canvas.height;
+                  if (naturalW < 10 || naturalH < 10) continue;
+                  
+                  var vw = window.innerWidth;
+                  var vh = window.innerHeight;
+                  
+                  // Calculate scale to fill viewport while preserving game aspect ratio
+                  var scale = Math.min(vw / naturalW, vh / naturalH);
+                  
+                  // Walk up to find the topmost game wrapper div (direct child of body)
+                  var wrapper = canvas;
+                  while (wrapper.parentElement && wrapper.parentElement !== document.body) {
+                    wrapper = wrapper.parentElement;
+                  }
+                  
+                  // Reset the wrapper to its natural size then scale it to fill the screen
+                  wrapper.style.setProperty('position', 'absolute', 'important');
+                  wrapper.style.setProperty('width', naturalW + 'px', 'important');
+                  wrapper.style.setProperty('height', naturalH + 'px', 'important');
+                  wrapper.style.setProperty('transform', 'scale(' + scale + ')', 'important');
+                  wrapper.style.setProperty('transform-origin', 'top left', 'important');
+                  // Center the scaled wrapper
+                  var offsetX = (vw - naturalW * scale) / 2;
+                  var offsetY = (vh - naturalH * scale) / 2;
+                  wrapper.style.setProperty('top', offsetX < 0 ? '0' : offsetY + 'px', 'important');
+                  wrapper.style.setProperty('left', offsetX < 0 ? '0' : offsetX + 'px', 'important');
+                  
+                  scaled = true;
+                  break;
+                }
+              }
+              
+              // Try scaling at multiple points in time as the game initializes
+              document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(scaleGameToViewport, 100);
+                setTimeout(scaleGameToViewport, 500);
+                setTimeout(scaleGameToViewport, 1500);
+              });
+              window.addEventListener('load', function() {
+                setTimeout(scaleGameToViewport, 200);
+                setTimeout(scaleGameToViewport, 1000);
+                setTimeout(scaleGameToViewport, 3000);
+              });
+              
+              // Watch for canvas elements being dynamically added (lazy-init games)
+              var observer = new MutationObserver(function(mutations) {
+                for (var m = 0; m < mutations.length; m++) {
+                  for (var n = 0; n < mutations[m].addedNodes.length; n++) {
+                    var node = mutations[m].addedNodes[n];
+                    if (node.tagName === 'CANVAS' || (node.querySelector && node.querySelector('canvas'))) {
+                      setTimeout(scaleGameToViewport, 300);
+                      return;
+                    }
+                  }
+                }
+              });
+              
+              if (document.body) {
+                observer.observe(document.body, { childList: true, subtree: true });
+              } else {
+                document.addEventListener('DOMContentLoaded', function() {
+                  observer.observe(document.body, { childList: true, subtree: true });
+                });
+              }
+              
+              // Re-scale on orientation change
+              window.addEventListener('orientationchange', function() {
+                scaled = false;
+                setTimeout(scaleGameToViewport, 500);
+              });
+            })();
+          </script>
         `;
 
         // Insert interceptor script at the most robust location in HTML structure
@@ -1058,9 +1165,12 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             <div
               className={`relative overflow-hidden z-10 ${
                 isFullscreen
-                  ? isPortraitMode
-                    ? "absolute inset-0 w-full h-full max-md:aspect-none md:relative md:h-full md:w-auto md:aspect-[9/16] mx-auto flex-shrink-0 bg-black md:bg-transparent"
-                    : "absolute inset-0 w-full h-full flex-shrink-0 bg-black md:relative"
+                  ? isMobileDevice
+                    // Mobile fullscreen: always fill the entire screen regardless of portrait/landscape
+                    ? "absolute inset-0 w-full h-full bg-black"
+                    : isPortraitMode
+                      ? "absolute inset-0 h-full w-auto aspect-[9/16] mx-auto flex-shrink-0 bg-black"
+                      : "absolute inset-0 w-full h-full flex-shrink-0 bg-black"
                   : isPortraitMode
                     ? `h-[68vh] md:h-[72vh] w-auto max-w-full ${aspectClass} mx-auto flex-shrink-0 bg-transparent`
                     : `w-full max-w-5xl aspect-video mx-auto flex-shrink-0 bg-black rounded-xl shadow-2xl border border-white/10`
