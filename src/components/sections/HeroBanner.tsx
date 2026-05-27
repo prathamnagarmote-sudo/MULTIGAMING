@@ -111,19 +111,19 @@ export function HeroBanner({ onPlayGame, onExploreCategory }: HeroBannerProps) {
         </div>
 
         {/* Bottom Banner Glassmorphic Label & Explore Button */}
-        <div className="absolute bottom-6 left-6 right-6 z-20 flex flex-col md:flex-row md:items-end justify-between pointer-events-none gap-4">
-          <div className="flex flex-col gap-1 select-none">
-            <span className="text-[9px] font-bold tracking-[0.3em] text-electric-blue font-mono uppercase">
+        <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6 z-20 flex flex-col md:flex-row md:items-end justify-between pointer-events-none gap-3 sm:gap-4">
+          <div className="flex flex-col gap-0.5 sm:gap-1 select-none">
+            <span className="text-[7.5px] sm:text-[9px] font-bold tracking-[0.2em] sm:tracking-[0.3em] text-electric-blue font-mono uppercase">
               {activeSlide.subtitle}
             </span>
-            <h2 className="text-xl md:text-3xl font-heading font-black text-white uppercase italic tracking-wider drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]">
+            <h2 className="text-sm sm:text-base md:text-3xl font-heading font-black text-white uppercase italic tracking-wider drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]">
               {activeSlide.title}
             </h2>
           </div>
-          <div className="pointer-events-auto">
+          <div className="pointer-events-auto shrink-0">
             <button
               onClick={() => onExploreCategory(activeSlide.targetId)}
-              className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-electric-blue to-neon-cyan text-white font-heading font-black text-xs uppercase tracking-widest hover:brightness-110 hover:scale-[1.03] shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all duration-300 cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2 sm:px-6 sm:py-3.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-electric-blue to-neon-cyan text-white font-heading font-black text-[9px] sm:text-xs uppercase tracking-widest hover:brightness-110 hover:scale-[1.03] shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all duration-300 cursor-pointer"
             >
               Explore Now
             </button>

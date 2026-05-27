@@ -1108,7 +1108,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                     style={{ opacity: isIframeLoaded ? 1 : 0 }}
                     allow="autoplay; fullscreen; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
                     allowFullScreen
-                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-top-navigation-by-user-activation allow-downloads"
                     scrolling="no"
                     title={game.title}
                   />

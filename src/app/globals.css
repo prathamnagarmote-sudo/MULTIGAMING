@@ -181,9 +181,11 @@ html {
   }
 }
 
-/* Prevent overscroll bounce on iOS */
+/* Prevent overscroll bounce & horizontal zoom overflow on mobile */
 html, body {
   overscroll-behavior: none;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 /* Game iframe touch handling */
