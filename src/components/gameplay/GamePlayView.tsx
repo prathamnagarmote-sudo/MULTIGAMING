@@ -61,6 +61,12 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const [hasStarted, setHasStarted] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
 
+  // Sync ref to avoid stale closures in background ZIP prefetch effect
+  const hasStartedRef = useRef(hasStarted);
+  useEffect(() => {
+    hasStartedRef.current = hasStarted;
+  }, [hasStarted]);
+
   const [showEscToast, setShowEscToast] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [showReportToast, setShowReportToast] = useState(false);
@@ -572,130 +578,61 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             })();
           </script>
           <style id="zylo-sandbox-canvas-fix">
-            /* Minimal CSS reset — the JS scaler handles all sizing */
             html, body {
               margin: 0 !important;
               padding: 0 !important;
               overflow: hidden !important;
               background: #000 !important;
+              width: 100% !important;
+              height: 100% !important;
             }
-            /* Inject viewport meta for games that omit it */
+            /* Hardware accelerated scaling via object-fit contain */
+            canvas {
+              width: 100% !important;
+              height: 100% !important;
+              object-fit: contain !important;
+              display: block !important;
+              margin: auto !important;
+            }
+            /* Typical container resets */
+            #canvas, #gameContainer, #game-container, #c2canvasdiv, #unity-container {
+              width: 100% !important;
+              height: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
           </style>
           <script id="zylo-universal-scaler">
             (function() {
-              // Inject viewport meta if missing (many games omit this)
               if (!document.querySelector('meta[name="viewport"]')) {
                 var meta = document.createElement('meta');
                 meta.name = 'viewport';
-                meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+                meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no';
                 (document.head || document.documentElement).appendChild(meta);
               }
 
-              var scaled = false;
-
-              // Core scaling function: scales the <html> element to fit the game canvas
-              // into the iframe viewport. This is the Poki-style approach that works with
-              // any game engine (Phaser, Unity, custom) on both desktop and mobile.
-              function scaleGameToViewport() {
-                if (scaled) return false;
-
-                var canvas = null;
-                var naturalW = 0, naturalH = 0;
-
-                // Find first canvas with valid buffer dimensions
+              function fixGameElements() {
                 var canvases = document.querySelectorAll('canvas');
                 for (var i = 0; i < canvases.length; i++) {
                   var c = canvases[i];
-                  if (c.width >= 10 && c.height >= 10) {
-                    canvas = c;
-                    naturalW = c.width;
-                    naturalH = c.height;
-                    break;
-                  }
-                }
-
-                // Fallback: try to measure first canvas by getBoundingClientRect
-                if (!canvas && canvases.length > 0) {
-                  var rect = canvases[0].getBoundingClientRect();
-                  if (rect.width >= 10 && rect.height >= 10) {
-                    canvas = canvases[0];
-                    naturalW = rect.width;
-                    naturalH = rect.height;
-                  }
-                }
-
-                if (!naturalW || !naturalH) return false;
-
-                var vw = window.innerWidth;
-                var vh = window.innerHeight;
-
-                // Calculate uniform scale factor to fit game into viewport (letterboxing)
-                var scale = Math.min(vw / naturalW, vh / naturalH);
-
-                var scaledW = Math.floor(naturalW * scale);
-                var scaledH = Math.floor(naturalH * scale);
-
-                // Center offsets
-                var offsetX = Math.floor((vw - scaledW) / 2);
-                var offsetY = Math.floor((vh - scaledH) / 2);
-
-                // Scale the root html element — safest universal approach
-                // This avoids touching any of the game's internal layout
-                var html = document.documentElement;
-                html.style.setProperty('width', naturalW + 'px', 'important');
-                html.style.setProperty('height', naturalH + 'px', 'important');
-                html.style.setProperty('overflow', 'hidden', 'important');
-                html.style.setProperty('position', 'fixed', 'important');
-                html.style.setProperty('top', (offsetY >= 0 ? offsetY : 0) + 'px', 'important');
-                html.style.setProperty('left', (offsetX >= 0 ? offsetX : 0) + 'px', 'important');
-                html.style.setProperty('transform', 'scale(' + scale + ')', 'important');
-                html.style.setProperty('transform-origin', 'top left', 'important');
-
-                // Also ensure body fills the html element
-                document.body.style.setProperty('width', '100%', 'important');
-                document.body.style.setProperty('height', '100%', 'important');
-                document.body.style.setProperty('margin', '0', 'important');
-                document.body.style.setProperty('overflow', 'hidden', 'important');
-
-                scaled = true;
-                return true;
-              }
-
-              // Retry loop — poll until canvas appears and has valid dimensions
-              var attempts = 0;
-              var maxAttempts = 20;
-              function tryScale() {
-                if (scaled || attempts >= maxAttempts) return;
-                attempts++;
-                if (!scaleGameToViewport()) {
-                  setTimeout(tryScale, 400);
+                  c.style.setProperty('width', '100%', 'important');
+                  c.style.setProperty('height', '100%', 'important');
+                  c.style.setProperty('max-width', '100%', 'important');
+                  c.style.setProperty('max-height', '100%', 'important');
+                  c.style.setProperty('object-fit', 'contain', 'important');
+                  c.style.setProperty('display', 'block', 'important');
+                  c.style.setProperty('margin', 'auto', 'important');
                 }
               }
 
-              document.addEventListener('DOMContentLoaded', function() { setTimeout(tryScale, 50); });
-              window.addEventListener('load', function() { if (!scaled) tryScale(); });
-
-              // MutationObserver for games that dynamically create canvas after load
-              var observer = new MutationObserver(function() {
-                if (!scaled) setTimeout(scaleGameToViewport, 200);
+              fixGameElements();
+              window.addEventListener('load', fixGameElements);
+              window.addEventListener('resize', fixGameElements);
+              var obs = new MutationObserver(fixGameElements);
+              if (document.body) obs.observe(document.body, { childList: true, subtree: true });
+              else document.addEventListener('DOMContentLoaded', function() {
+                obs.observe(document.body, { childList: true, subtree: true });
               });
-              function attachObserver() {
-                observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
-              }
-              if (document.body) {
-                attachObserver();
-              } else {
-                document.addEventListener('DOMContentLoaded', attachObserver);
-              }
-
-              // Re-scale on orientation change and resize
-              function onResize() {
-                scaled = false;
-                attempts = 0;
-                setTimeout(tryScale, 300);
-              }
-              window.addEventListener('orientationchange', onResize);
-              window.addEventListener('resize', onResize);
             })();
           </script>
         `;
@@ -770,10 +707,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           if (isMobile) {
             zipSrcdocCacheRef.current = indexText;
             // Only push to state if user has already tapped PLAY
-            if (hasStarted) setZipSrcdoc(indexText);
+            if (hasStartedRef.current) setZipSrcdoc(indexText);
           } else {
             zipUrlCacheRef.current = finalUrl;
-            if (hasStarted) setZipIframeUrl(finalUrl);
+            if (hasStartedRef.current) setZipIframeUrl(finalUrl);
           }
           setZipLoading(false);
         }
@@ -793,8 +730,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
       objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
       objectUrlsRef.current = [];
     };
-  // Removed hasStarted dep — ZIP prefetches in background as soon as game data loads.
-  // The useEffect below handles showing the prefetched result when user taps PLAY.
+  // ZIP prefetches in background as soon as game data loads.
+  // We removed hasStarted dependency to prevent re-triggering and revoking resources when play starts.
   }, [gameId, game?.id]);
 
   // Handle vertical window scroll state
@@ -1183,8 +1120,11 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               className={`relative overflow-hidden z-10 ${
                 isFullscreen
                   ? isMobileDevice
-                    // Mobile fullscreen: always fill the entire screen regardless of portrait/landscape
-                    ? "absolute inset-0 w-full h-full bg-black"
+                    ? isPortraitMode
+                      // Portrait game on mobile: fill the full screen vertically
+                      ? "absolute inset-0 w-full h-full bg-black"
+                      // Landscape game on mobile: rotate 90deg to simulate landscape orientation
+                      : "bg-black rotate-landscape-mobile"
                     : isPortraitMode
                       ? "absolute inset-0 h-full w-auto aspect-[9/16] mx-auto flex-shrink-0 bg-black"
                       : "absolute inset-0 w-full h-full flex-shrink-0 bg-black"
