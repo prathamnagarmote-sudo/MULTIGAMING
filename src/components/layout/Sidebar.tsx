@@ -70,14 +70,14 @@ export function Sidebar({ currentView, currentUser, isSidebarVisible = true, isM
       <aside
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`fixed left-0 bottom-0 bg-[#0a0a0f] z-50 flex flex-col overflow-hidden transition-all duration-300 ease-[0.16,1,0.3,1] shadow-[10px_0_40px_rgba(0,0,0,0.6)] transform ${
-          isMobileMenuOpen ? "top-0" : "top-14 md:top-16"
-        } ${
+        className={`fixed left-0 bottom-0 bg-[#0a0a0f] z-50 flex flex-col overflow-hidden transition-all duration-300 ease-[0.16,1,0.3,1] shadow-[10px_0_40px_rgba(0,0,0,0.6)] transform border-r border-white/[0.06] ${
           isMobileMenuOpen 
-            ? "w-[270px] translate-x-0 border-r border-white/[0.06] opacity-100" 
-            : isSidebarVisible
-              ? "translate-x-0 border-r border-white/[0.06] opacity-100"
-              : "-translate-x-full md:-translate-x-full w-0 md:w-0 border-none opacity-0 pointer-events-none"
+            ? "top-0 translate-x-0 w-[270px] opacity-100" 
+            : "top-14 -translate-x-full w-[270px] opacity-0 pointer-events-none md:pointer-events-auto"
+        } ${
+          isSidebarVisible
+            ? "md:translate-x-0 md:opacity-100 md:top-16"
+            : "md:-translate-x-full md:w-0 md:opacity-0 md:pointer-events-none"
         } ${
           isExpanded && isSidebarVisible ? "md:w-[240px]" : "md:w-[72px]"
         }`}
