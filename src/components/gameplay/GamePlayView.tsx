@@ -228,30 +228,25 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           return !isDir && !isMeta && name !== indexPath;
         });
 
-        // Parallelized extraction in batches of 8 — much faster than sequential on mobile
-        const BATCH_SIZE = 8;
-        for (let batchStart = 0; batchStart < filesToExtract.length; batchStart += BATCH_SIZE) {
-          if (!isSubscribed) break;
-          const batch = filesToExtract.slice(batchStart, batchStart + BATCH_SIZE);
-          await Promise.all(batch.map(async (name) => {
-            if (!isSubscribed) return;
-            const file = zip.files[name];
-            const mimeType = getMimeType(name);
-            const content = await file.async("blob");
-            const blob = new Blob([content], { type: mimeType });
-            const url = URL.createObjectURL(blob);
-            objectUrlsRef.current.push(url);
-            pathMap[name] = url;
-            const normalized = name.replace(/\\/g, "/");
-            pathMap[normalized] = url;
-            pathMap[`./${normalized}`] = url;
-            if (baseDir && normalized.startsWith(baseDir)) {
-              const relativeToHtml = normalized.substring(baseDir.length);
-              pathMap[relativeToHtml] = url;
-              pathMap[`./${relativeToHtml}`] = url;
-            }
-          }));
-        }
+        // Extract all non-html files completely in parallel — provides near-instant uncompress speeds on mobile
+        await Promise.all(filesToExtract.map(async (name) => {
+          if (!isSubscribed) return;
+          const file = zip.files[name];
+          const mimeType = getMimeType(name);
+          const content = await file.async("blob");
+          const blob = new Blob([content], { type: mimeType });
+          const url = URL.createObjectURL(blob);
+          objectUrlsRef.current.push(url);
+          pathMap[name] = url;
+          const normalized = name.replace(/\\/g, "/");
+          pathMap[normalized] = url;
+          pathMap[`./${normalized}`] = url;
+          if (baseDir && normalized.startsWith(baseDir)) {
+            const relativeToHtml = normalized.substring(baseDir.length);
+            pathMap[relativeToHtml] = url;
+            pathMap[`./${relativeToHtml}`] = url;
+          }
+        }));
 
         if (!isSubscribed) return;
 
@@ -575,6 +570,11 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               safeOverride(HTMLLinkElement.prototype, 'href');
               safeOverride(HTMLAudioElement.prototype, 'src');
               safeOverride(HTMLSourceElement.prototype, 'src');
+
+              // Forward wheel scroll event to parent window to enable seamless scrolling on page
+              window.addEventListener('wheel', function(e) {
+                window.parent.postMessage({ type: 'iframe-scroll', deltaY: e.deltaY }, '*');
+              }, { passive: true });
             })();
           </script>
           <style id="zylo-sandbox-canvas-fix">
@@ -760,6 +760,21 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     }
   }, [hasStarted, game?.isZipGame]);
 
+  // Listen for same-origin iframe wheel scroll events to allow seamless page scrolling when hovering the iframe
+  useEffect(() => {
+    const handleScrollMessage = (e: MessageEvent) => {
+      if (e.data && e.data.type === "iframe-scroll") {
+        if (isFullscreen) return;
+        window.scrollBy({
+          top: e.data.deltaY,
+          behavior: "auto"
+        });
+      }
+    };
+    window.addEventListener("message", handleScrollMessage);
+    return () => window.removeEventListener("message", handleScrollMessage);
+  }, [isFullscreen]);
+
   // Safety fallback for iframe onLoad event to prevent perpetual spinner
   useEffect(() => {
     if (hasStarted) {
@@ -771,10 +786,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   // Auto-clear loading overlay when srcdoc is injected (srcdoc iframes may not fire onLoad reliably)
   useEffect(() => {
     if (zipSrcdoc) {
-      // Give a short delay for the browser to parse and render the srcdoc content
+      // Snappy delay for modern browser mounting
       const timer = setTimeout(() => {
         setIsIframeLoaded(true);
-      }, 800);
+      }, 150);
       return () => clearTimeout(timer);
     }
   }, [zipSrcdoc]);
