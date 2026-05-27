@@ -797,9 +797,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           
           setIsFullscreen(true);
 
-          if (screen.orientation && screen.orientation.lock) {
+          const screenOrient = screen.orientation as any;
+          if (screenOrient && screenOrient.lock) {
             const orientationMode = game?.isPortrait ? "portrait" : "landscape";
-            await screen.orientation.lock(orientationMode).catch((err) => {
+            await screenOrient.lock(orientationMode).catch((err: any) => {
               console.warn("Screen orientation lock failed:", err);
             });
           }
@@ -821,9 +822,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
         setIsFullscreen(true);
 
         const isMobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
-        if (isMobile && screen.orientation && screen.orientation.lock) {
+        const screenOrient = screen.orientation as any;
+        if (isMobile && screenOrient && screenOrient.lock) {
           const orientationMode = game?.isPortrait ? "portrait" : "landscape";
-          await screen.orientation.lock(orientationMode).catch((err) => {
+          await screenOrient.lock(orientationMode).catch((err: any) => {
             console.warn("Screen orientation lock failed:", err);
           });
         }
