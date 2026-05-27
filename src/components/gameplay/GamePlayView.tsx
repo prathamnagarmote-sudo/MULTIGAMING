@@ -59,6 +59,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const [isBarHidden, setIsBarHidden] = useState(false);
   const [isPortraitOverride, setIsPortraitOverride] = useState<boolean | null>(null);
   const [hasStarted, setHasStarted] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
 
   const [showEscToast, setShowEscToast] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
@@ -72,6 +73,30 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   // Iframe load state
   const [isIframeLoaded, setIsIframeLoaded] = useState(false);
   const objectUrlsRef = useRef<string[]>([]);
+
+  // Detect mobile once on mount (client-side only)
+  useEffect(() => {
+    const mobile = window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    setIsMobileDevice(mobile);
+  }, []);
+
+  // Lock body scroll when in mobile fullscreen to prevent background page scrolling
+  useEffect(() => {
+    if (isMobileDevice && isFullscreen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+    };
+  }, [isMobileDevice, isFullscreen]);
 
   // Sync / load active game & recommendations
   useEffect(() => {
@@ -641,7 +666,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
       objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
       objectUrlsRef.current = [];
     };
-  }, [gameId, game?.id]);
+  // NOTE: hasStarted is a critical dependency here — on mobile, the user presses Play AFTER
+  // the game data has already loaded, so we need this effect to re-run when hasStarted flips to true.
+  }, [gameId, game?.id, hasStarted]);
 
   // Handle vertical window scroll state
   useEffect(() => {
@@ -778,14 +805,12 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   };
 
   const handleStartPlay = async () => {
-    setHasStarted(true);
-
-    const isMobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
-    if (isMobile) {
-      // On mobile devices, we strictly use CSS virtual fullscreen (fixed inset-0 z-50 bg-black)
-      // and do NOT call the browser's buggy native fullscreen API. This prevents rendering crashes.
+    const mobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+    // On mobile: set fullscreen first so the container is ready, then start loading
+    if (mobile) {
       setIsFullscreen(true);
     }
+    setHasStarted(true);
   };
 
   const handleFullscreen = async () => {
@@ -811,6 +836,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
       if (document.exitFullscreen) document.exitFullscreen().catch(() => { });
       else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
       else if ((document as any).msExitFullscreen) (document as any).msExitFullscreen();
+    } else {
+      // On mobile we use CSS-only fullscreen (no native fullscreen API)
+      // so we MUST manually reset the isFullscreen state here
+      setIsFullscreen(false);
     }
   };
 
@@ -946,8 +975,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               iframeRef.current.focus();
             }
           }}
+          style={isFullscreen && isMobileDevice ? { height: '100dvh', width: '100dvw', top: 0, left: 0 } : {}}
           className={`w-full overflow-hidden ${isFullscreen
-            ? `fixed inset-0 z-50 flex flex-col items-center justify-center bg-black ${isBarHidden ? "p-0" : "p-0 md:pb-[64px]"
+            ? `fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black ${isBarHidden ? "p-0" : "p-0 md:pb-[64px]"
             }`
             : "relative flex flex-col bg-[#0b0b12]/80 border-2 border-white/20 shadow-[0_25px_60px_rgba(0,0,0,0.8)] rounded-2xl z-20 overflow-hidden"
             }`}
@@ -1065,6 +1095,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                     allowFullScreen
                     scrolling="no"
                     title={game.title}
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-top-navigation-by-user-activation allow-modals allow-downloads"
                   />
                 )
               ) : (
