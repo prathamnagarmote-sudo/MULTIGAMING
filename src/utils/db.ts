@@ -161,17 +161,30 @@ export const saveGameZIP = async (gameId: string, zipBlob: Blob): Promise<void> 
   await uploadBytes(storageRef, zipBlob);
 };
 
-// We now fetch the ZIP file through our same-origin API proxy to completely bypass remote CORS blocks on mobile devices
+// Fetch game ZIP with direct-first strategy for maximum speed.
+// Direct fetch (single-hop, no proxy overhead) is attempted first.
+// Falls back to Edge streaming proxy only if direct fetch fails (CORS block on some mobile browsers).
 export const getGameZIP = async (zipUrl: string): Promise<Blob | null> => {
+  // Strategy 1: Direct fetch (fastest — single hop, no proxy)
+  try {
+    const directResponse = await fetch(zipUrl, { mode: "cors" });
+    if (directResponse.ok) {
+      return await directResponse.blob();
+    }
+  } catch {
+    // CORS or network error — fall through to proxy
+  }
+
+  // Strategy 2: Edge streaming proxy (still fast — streams without buffering)
   try {
     const proxyUrl = `/api/proxy-zip?url=${encodeURIComponent(zipUrl)}`;
     const response = await fetch(proxyUrl);
     if (!response.ok) {
-      throw new Error(`Failed to fetch game ZIP from proxy: ${response.statusText}`);
+      throw new Error(`Failed to fetch game ZIP: ${response.statusText}`);
     }
     return await response.blob();
   } catch (err: any) {
-    console.error("ZIP proxy fetch error:", err);
+    console.error("ZIP fetch error:", err);
     throw err;
   }
 };

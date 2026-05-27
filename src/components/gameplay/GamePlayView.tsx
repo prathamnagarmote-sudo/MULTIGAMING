@@ -60,6 +60,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const [isPortraitOverride, setIsPortraitOverride] = useState<boolean | null>(null);
   const [hasStarted, setHasStarted] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [isGameInteracting, setIsGameInteracting] = useState(false);
 
   // Sync ref to avoid stale closures in background ZIP prefetch effect
   const hasStartedRef = useRef(hasStarted);
@@ -164,21 +165,20 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
         if (!isSubscribed) return;
 
-        console.log("Downloading ZIP from UploadThing...", game.zipUrl);
+        const t0 = performance.now();
+        console.log("Downloading ZIP...", game.zipUrl);
         const zipBlob = await getGameZIP(game.zipUrl);
         if (!zipBlob) {
-          throw new Error("Could not download game ZIP package from UploadThing server.");
+          throw new Error("Could not download game ZIP package.");
         }
-        const jszip = new JSZip();
+        console.log(`ZIP downloaded in ${((performance.now() - t0) / 1000).toFixed(1)}s (${(zipBlob.size / 1024 / 1024).toFixed(1)}MB)`);
 
-        console.log("Parsing ZIP blob...");
-        // Add timeout to JSZip as well
+        const t1 = performance.now();
         const zip = await Promise.race([
-          jszip.loadAsync(zipBlob),
-          new Promise<any>((_, reject) => setTimeout(() => reject(new Error("ZIP parsing timed out.")), 15000))
+          new JSZip().loadAsync(zipBlob),
+          new Promise<any>((_, reject) => setTimeout(() => reject(new Error("ZIP parsing timed out.")), 60000))
         ]);
-
-        console.log("ZIP parsed successfully. Finding index.html...");
+        console.log(`ZIP parsed in ${((performance.now() - t1) / 1000).toFixed(1)}s`);
 
         // Find index.html recursively, ignoring macOS metadata folders & dotfiles
         const fileNames = Object.keys(zip.files);
@@ -217,38 +217,44 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           }
         };
 
-        // Extract non-html files sequentially to prevent browser OOM crashes on large games
+        // Filter extractable files (skip dirs, macOS metadata, index.html)
         const filesToExtract = fileNames.filter((name) => {
           const isDir = zip.files[name].dir;
           const isMeta = name.toLowerCase().includes("__macosx") || name.split("/").pop()?.startsWith("._");
           return !isDir && !isMeta && name !== indexPath;
         });
 
-        // Extract all non-html files completely in parallel — provides near-instant uncompress speeds on mobile
-        await Promise.all(filesToExtract.map(async (name) => {
-          if (!isSubscribed) return;
-          const file = zip.files[name];
-          const mimeType = getMimeType(name);
-          const content = await file.async("blob");
-          const blob = new Blob([content], { type: mimeType });
-          const url = URL.createObjectURL(blob);
-          objectUrlsRef.current.push(url);
-          pathMap[name] = url;
-          const normalized = name.replace(/\\/g, "/");
-          pathMap[normalized] = url;
-          pathMap[`./${normalized}`] = url;
-          if (baseDir && normalized.startsWith(baseDir)) {
-            const relativeToHtml = normalized.substring(baseDir.length);
-            pathMap[relativeToHtml] = url;
-            pathMap[`./${relativeToHtml}`] = url;
-          }
-        }));
+        const t2 = performance.now();
+
+        // Extract all files + index.html concurrently for maximum throughput
+        // Use arraybuffer (faster decompression) and create a single typed Blob per file
+        const [, indexText] = await Promise.all([
+          // Asset extraction — all in parallel
+          Promise.all(filesToExtract.map(async (name) => {
+            if (!isSubscribed) return;
+            const file = zip.files[name];
+            const mimeType = getMimeType(name);
+            const buffer = await file.async("arraybuffer");
+            const url = URL.createObjectURL(new Blob([buffer], { type: mimeType }));
+            objectUrlsRef.current.push(url);
+            pathMap[name] = url;
+            const normalized = name.replace(/\\/g, "/");
+            pathMap[normalized] = url;
+            pathMap[`./${normalized}`] = url;
+            if (baseDir && normalized.startsWith(baseDir)) {
+              const relativeToHtml = normalized.substring(baseDir.length);
+              pathMap[relativeToHtml] = url;
+              pathMap[`./${relativeToHtml}`] = url;
+            }
+          })),
+          // Index.html read — runs concurrently with asset extraction
+          zip.files[indexPath].async("text")
+        ]);
+        console.log(`${filesToExtract.length} files extracted in ${((performance.now() - t2) / 1000).toFixed(1)}s`);
 
         if (!isSubscribed) return;
 
-        // Read index.html as text
-        const indexFile = zip.files[indexPath];
-        let indexText = await indexFile.async("text");
+        let modifiedIndex = indexText;
 
         // Inject the fetch/XHR/Element/Worker Interceptor script at the very top of <head>/<html>
         // It intercepts relative network requests and serves them from our pathMap!
@@ -632,52 +638,51 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             })();
           </script>
         `;
-
         // Insert interceptor script at the most robust location in HTML structure
         let inserted = false;
-        const headTag = indexText.match(/<head[^>]*>/i);
+        const headTag = modifiedIndex.match(/<head[^>]*>/i);
         if (headTag) {
           const insertIdx = headTag.index! + headTag[0].length;
-          indexText = indexText.slice(0, insertIdx) + "\n" + interceptorScript + indexText.slice(insertIdx);
+          modifiedIndex = modifiedIndex.slice(0, insertIdx) + "\n" + interceptorScript + modifiedIndex.slice(insertIdx);
           inserted = true;
         }
 
         if (!inserted) {
-          const htmlTag = indexText.match(/<html[^>]*>/i);
+          const htmlTag = modifiedIndex.match(/<html[^>]*>/i);
           if (htmlTag) {
             const insertIdx = htmlTag.index! + htmlTag[0].length;
-            indexText = indexText.slice(0, insertIdx) + "\n" + interceptorScript + indexText.slice(insertIdx);
+            modifiedIndex = modifiedIndex.slice(0, insertIdx) + "\n" + interceptorScript + modifiedIndex.slice(insertIdx);
             inserted = true;
           }
         }
 
         if (!inserted) {
-          const docTypeTag = indexText.match(/<!DOCTYPE\s+html[^>]*>/i);
+          const docTypeTag = modifiedIndex.match(/<!DOCTYPE\s+html[^>]*>/i);
           if (docTypeTag) {
             const insertIdx = docTypeTag.index! + docTypeTag[0].length;
-            indexText = indexText.slice(0, insertIdx) + "\n" + interceptorScript + indexText.slice(insertIdx);
+            modifiedIndex = modifiedIndex.slice(0, insertIdx) + "\n" + interceptorScript + modifiedIndex.slice(insertIdx);
             inserted = true;
           }
         }
 
         if (!inserted) {
-          indexText = interceptorScript + indexText;
+          modifiedIndex = interceptorScript + modifiedIndex;
         }
 
-        // Walk the indexText and replace static relative paths in script, link, img, audio, video elements!
+        // Walk the modifiedIndex and replace static relative paths in script, link, img, audio, video elements!
         // Resiliently handles quotes (double, single, none), query parameters, and hashes.
         for (const [relativePath, blobUrl] of Object.entries(pathMap)) {
           const escapedPath = relativePath.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
 
           const attrRegex = new RegExp("(src|href|value|data)\\s*=\\s*([\"']?)(\\.\\/|\\/)?" + escapedPath + "(\\?[^\"'>\\s]*)?(#[^\"'>\\s]*)?\\2", "gi");
-          indexText = indexText.replace(attrRegex, `$1="${blobUrl}"`);
+          modifiedIndex = modifiedIndex.replace(attrRegex, `$1="${blobUrl}"`);
 
           const urlRegex = new RegExp("url\\s*\\(\\s*['\"]?(\\.\\/|\\/)?" + escapedPath + "(\\?[^'\")]*)?(#[^'\")]*)?['\"]?\\s*\\)", "gi");
-          indexText = indexText.replace(urlRegex, `url("${blobUrl}")`);
+          modifiedIndex = modifiedIndex.replace(urlRegex, `url("${blobUrl}")`);
         }
 
         // Create Blob for modified index.html (used universally on both desktop and mobile)
-        const indexBlob = new Blob([indexText], { type: "text/html" });
+        const indexBlob = new Blob([modifiedIndex], { type: "text/html" });
         const finalUrl = URL.createObjectURL(indexBlob);
 
         if (isSubscribed) {
@@ -895,6 +900,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
       setIsFullscreen(true);
     }
     setHasStarted(true);
+    setIsGameInteracting(true);
   };
 
   const handleFullscreen = async () => {
@@ -968,6 +974,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   // Resolve precise aspect ratio style based on game metadata to prevent black spacing
   const isPortraitMode = isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait;
   const gameAspect = game.aspectRatio || (game.isPortrait ? "9:16" : "16:9");
+
+  // A game is interacting on mobile, in fullscreen, or when desktop user explicitly clicks to focus/play
+  const isInteracting = isGameInteracting || isMobileDevice || isFullscreen;
 
   let aspectClass = "aspect-video";
   if (isPortraitMode) {
@@ -1054,6 +1063,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
         {/* Dedicated Player Frame wrapper - supports standard and fullscreen theater displays */}
         <div
           ref={playerFrameRef}
+          onMouseLeave={() => setIsGameInteracting(false)}
           onClick={() => {
             if (isFullscreen && iframeRef.current) {
               iframeRef.current.focus();
@@ -1178,20 +1188,53 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 // For ZIP games: show iframe once blobUrl is ready
                 // For URL games: show iframe immediately once hasStarted
                 (!game.isZipGame || zipIframeUrl) && (
-                  <iframe
-                    ref={iframeRef}
-                    {...(game.isZipGame
-                      ? { src: zipIframeUrl! }
-                      // URL game: use the configured iframe URL
-                      : { src: getSecureIframeUrl(game.iframeUrl) }
+                  <>
+                    <iframe
+                      ref={iframeRef}
+                      {...(game.isZipGame
+                        ? { src: zipIframeUrl! }
+                        // URL game: use the configured iframe URL
+                        : { src: getSecureIframeUrl(game.iframeUrl) }
+                      )}
+                      onLoad={() => setIsIframeLoaded(true)}
+                      className={`w-full h-full border-none relative z-0 ${
+                        !isInteracting ? "pointer-events-none" : "pointer-events-auto"
+                      }`}
+                      allow="autoplay; fullscreen; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
+                      allowFullScreen
+                      scrolling="no"
+                      title={game.title}
+                    />
+
+                    {/* Premium Focus & Interaction Overlay for Desktop */}
+                    {!isInteracting && isIframeLoaded && (
+                      <div 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsGameInteracting(true);
+                          setTimeout(() => iframeRef.current?.focus(), 50);
+                        }}
+                        className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[3px] border-2 border-dashed border-electric-blue/40 rounded-xl cursor-pointer group transition-all duration-300 hover:bg-black/75 hover:border-electric-blue/80"
+                      >
+                        <div className="flex flex-col items-center gap-3 p-6 text-center select-none max-w-sm">
+                          {/* Glowing animated Gamepad icon */}
+                          <div className="relative">
+                            <div className="absolute -inset-2 rounded-full bg-electric-blue/20 blur-md group-hover:bg-electric-blue/40 transition duration-300" />
+                            <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-r from-electric-blue to-neon-purple flex items-center justify-center border border-white/10 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                              <Gamepad className="w-6 h-6 sm:w-7 sm:h-7 text-white animate-pulse" />
+                            </div>
+                          </div>
+                          
+                          <span className="text-sm font-heading font-black tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-electric-blue to-neon-cyan drop-shadow-[0_2px_4px_rgba(0,240,255,0.2)]">
+                            Click to Play & Interact
+                          </span>
+                          <span className="text-[10px] text-white/50 leading-relaxed font-mono">
+                            Locks keyboard & mouse to the game. Move cursor out of the game area to scroll the page.
+                          </span>
+                        </div>
+                      </div>
                     )}
-                    onLoad={() => setIsIframeLoaded(true)}
-                    className="w-full h-full border-none relative z-0"
-                    allow="autoplay; fullscreen; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
-                    allowFullScreen
-                    scrolling="no"
-                    title={game.title}
-                  />
+                  </>
                 )
               ) : (
                 <div className="absolute inset-0 z-30 flex flex-col items-center justify-center overflow-hidden bg-black/85 rounded-xl">
