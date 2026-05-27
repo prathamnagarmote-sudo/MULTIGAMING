@@ -946,10 +946,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               iframeRef.current.focus();
             }
           }}
-          className={`relative w-full overflow-hidden ${isFullscreen
+          className={`w-full overflow-hidden ${isFullscreen
             ? `fixed inset-0 z-50 flex flex-col items-center justify-center bg-black ${isBarHidden ? "p-0" : "p-0 md:pb-[64px]"
             }`
-            : "flex flex-col bg-[#0b0b12]/80 border-2 border-white/20 shadow-[0_25px_60px_rgba(0,0,0,0.8)] rounded-2xl z-20 overflow-hidden"
+            : "relative flex flex-col bg-[#0b0b12]/80 border-2 border-white/20 shadow-[0_25px_60px_rgba(0,0,0,0.8)] rounded-2xl z-20 overflow-hidden"
             }`}
         >
             {/* Ambient Blurred Background backdrop (shown in fullscreen or portrait mode) */}

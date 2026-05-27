@@ -105,13 +105,11 @@ export default function Home() {
   const handleSelectGame = (id: string) => {
     setActiveGameId(id);
     setActiveView("play");
-    refreshGames();
   };
 
   const handleBackToHome = () => {
     setActiveView("home");
     setActiveGameId(null);
-    refreshGames();
   };
 
   const handleLogout = () => {
@@ -185,7 +183,6 @@ export default function Home() {
           onNavigate={(view) => {
             setActiveView(view);
             setActiveGameId(null);
-            refreshGames();
             setIsMobileMenuOpen(false);
           }}
         />
@@ -202,7 +199,6 @@ export default function Home() {
             onChangeView={(view) => {
               setActiveView(view);
               setActiveGameId(null);
-              refreshGames();
               setIsMobileMenuOpen(false);
             }}
           />
@@ -320,7 +316,6 @@ export default function Home() {
               onClick={() => {
                 setActiveView("home");
                 setActiveGameId(null);
-                refreshGames();
               }}
               className={`flex flex-col items-center gap-0.5 py-2 px-5 rounded-xl transition-all duration-200 ${activeView === "home"
                   ? "text-electric-blue bg-electric-blue/10"
@@ -335,7 +330,6 @@ export default function Home() {
               onClick={() => {
                 setActiveView(currentUser ? "dashboard" : "login");
                 setActiveGameId(null);
-                refreshGames();
               }}
               className={`flex flex-col items-center gap-0.5 py-2 px-5 rounded-xl transition-all duration-200 ${activeView === "login" || activeView === "dashboard"
                   ? "text-neon-purple bg-neon-purple/10"
