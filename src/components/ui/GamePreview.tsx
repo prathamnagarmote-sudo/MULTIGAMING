@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { GameData } from "@/data/mockGames";
+import { GameData } from "@/utils/db";
 import { Play, Star, Users, Monitor, Gamepad2, Bookmark, Share2 } from "lucide-react";
 
 interface GamePreviewProps {

@@ -11,28 +11,34 @@ interface HeroBannerProps {
 
 const VIBRANT_BG_IMAGES = [
   {
-    url: "https://res.cloudinary.com/dwk1cnlw2/image/upload/v1779513910/Loom_Screenshot_2026-05-23_at_10.53.17_amw1ek.png",
+    url: "https://res.cloudinary.com/dwk1cnlw2/image/upload/v1779780232/board_games_pa0hjc.png",
     title: "BOARD GAMES UNIVERSE",
     subtitle: "EXPLORE MIND STRATEGY & CLASSICS",
     targetId: "board-games"
   },
   {
-    url: "https://res.cloudinary.com/dwk1cnlw2/image/upload/v1779513656/Loom_Screenshot_2026-05-23_at_10.47.45_skvjq9.png",
+    url: "https://res.cloudinary.com/dwk1cnlw2/image/upload/v1779875349/shooting_games_lbrscd.png",
     title: "SHOOTING GAMES ARENA",
     subtitle: "FPS, SCI-FI, & BATTLE ROYALE",
     targetId: "shooting-games"
   },
   {
-    url: "https://res.cloudinary.com/dwk1cnlw2/image/upload/v1779513572/Loom_Screenshot_2026-05-23_at_10.49.02_jyuawt.png",
+    url: "https://res.cloudinary.com/dwk1cnlw2/image/upload/v1779875808/ChatGPT_Image_May_27_2026_03_26_25_PM_f16s4f.png",
     title: "RACING & DRIVING COLLECTION",
     subtitle: "HIGH-OCTANE SPEED & DRIFT CHALLENGES",
     targetId: "racing-games"
   },
   {
-    url: "https://res.cloudinary.com/dwk1cnlw2/image/upload/v1779513799/Loom_Screenshot_2026-05-23_at_10.51.31_fbmbjs.png",
+    url: "https://res.cloudinary.com/dwk1cnlw2/image/upload/v1779783542/arcade_games_high_resoltuion_fxo8ll.png",
     title: "ARCADE & CASUAL GAMES WORLD",
     subtitle: "RETRO PIXELS & INSTANT CLASSICS",
     targetId: "arcade-games"
+  },
+  {
+    url: "https://res.cloudinary.com/dwk1cnlw2/image/upload/v1779874357/shooting_multiplayer_clash_rqrei7.png",
+    title: "MULTIPLAYER CLASH BATTLES",
+    subtitle: "TEAM UP & DOMINATE THE ARENA",
+    targetId: "multiplayer-games"
   }
 ];
 
@@ -63,11 +69,11 @@ export function HeroBanner({ onPlayGame, onExploreCategory }: HeroBannerProps) {
 
   return (
     <div className="mb-8">
-      {/* 100% Full-Width Aesthetic Sliding Arena */}
+      {/* 100% Elegant Centered Sliding Arena with Controlled Height */}
       <section
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="relative -mx-3 sm:-mx-4 md:-mx-6 h-[280px] sm:h-[360px] md:h-[480px] overflow-hidden border border-white/[0.06] bg-[#030303] shadow-[0_20px_50px_rgba(0,0,0,0.65)] sm:rounded-2xl select-none group"
+        className="relative w-full aspect-[16/11] sm:aspect-[16/10] md:aspect-[1.9/1] max-h-[360px] sm:max-h-[480px] md:max-h-[560px] rounded-2xl overflow-hidden border border-white/[0.06] bg-[#030303] shadow-[0_20px_50px_rgba(0,0,0,0.65)] select-none group"
       >
         {/* Spatial Cyber Grid Mesh Background */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:40px_40px] z-10 pointer-events-none" />
@@ -88,7 +94,7 @@ export function HeroBanner({ onPlayGame, onExploreCategory }: HeroBannerProps) {
             <img
               src={activeSlide.url}
               alt={activeSlide.title}
-              className="w-full h-full object-cover brightness-[1.05] contrast-[1.02] saturation-[1.1]"
+              className="relative z-10 w-full h-full object-cover brightness-[1.05] contrast-[1.02] saturation-[1.1] transition-transform duration-1000 ease-out group-hover:scale-[1.05] group-hover:brightness-[1.1]"
             />
           </motion.div>
         </AnimatePresence>
@@ -153,11 +159,10 @@ export function HeroBanner({ onPlayGame, onExploreCategory }: HeroBannerProps) {
                   e.stopPropagation();
                   setActiveIdx(idx);
                 }}
-                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                  isActive 
-                    ? "w-8 bg-electric-blue shadow-[0_0_10px_#00f0ff]" 
+                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${isActive
+                    ? "w-8 bg-electric-blue shadow-[0_0_10px_#00f0ff]"
                     : "w-2 bg-white/20 hover:bg-white/40"
-                }`}
+                  }`}
                 title={`Go to slide ${idx + 1}`}
               />
             );

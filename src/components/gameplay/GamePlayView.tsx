@@ -22,7 +22,8 @@ import {
   MessageSquare,
   Minimize2,
   Smartphone,
-  ChevronUp
+  ChevronUp,
+  X
 } from "lucide-react";
 import JSZip from "jszip";
 import { GameData, getGamesDB, submitVoteDB, getGameZIP } from "@/utils/db";
@@ -49,6 +50,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isBarHidden, setIsBarHidden] = useState(false);
   const [isPortraitOverride, setIsPortraitOverride] = useState<boolean | null>(null);
+  const [hasStarted, setHasStarted] = useState(false);
+  const [isLandscapeRotationRequired, setIsLandscapeRotationRequired] = useState(false);
 
   const [showEscToast, setShowEscToast] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
@@ -58,28 +61,39 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const [zipIframeUrl, setZipIframeUrl] = useState<string | null>(null);
   const [zipLoading, setZipLoading] = useState(false);
   const [zipError, setZipError] = useState<string | null>(null);
-  
+
   // Iframe load state
   const [isIframeLoaded, setIsIframeLoaded] = useState(false);
   const objectUrlsRef = useRef<string[]>([]);
 
   // Sync / load active game & recommendations
   useEffect(() => {
-    const allGames = getGamesDB();
-    const active = allGames.find((g) => g.id === gameId);
-    if (active) {
-      setGame(active);
-      // Filter suggestions: same genre or trending, max 6 items
-      const filtered = allGames
-        .filter((g) => g.id !== gameId)
-        .sort((a, b) => {
-          if (a.genre === active.genre && b.genre !== active.genre) return -1;
-          if (a.genre !== active.genre && b.genre === active.genre) return 1;
-          return parseFloat(b.plays) - parseFloat(a.plays);
-        })
-        .slice(0, 6);
-      setSuggestions(filtered);
-    }
+    const isMobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
+    setHasStarted(!isMobile);
+    setIsIframeLoaded(false);
+    const fetchGame = async () => {
+      try {
+        const allGames = await getGamesDB();
+        const active = allGames.find((g) => g.id === gameId);
+        if (active) {
+          setGame(active);
+          // Filter suggestions: same genre or trending, max 6 items
+          const filtered = allGames
+            .filter((g) => g.id !== gameId)
+            .sort((a, b) => {
+              if (a.genre === active.genre && b.genre !== active.genre) return -1;
+              if (a.genre !== active.genre && b.genre === active.genre) return 1;
+              return parseFloat(b.plays) - parseFloat(a.plays);
+            })
+            .slice(0, 6);
+          setSuggestions(filtered);
+        }
+      } catch (err) {
+        console.error("Failed to fetch game details from Firebase", err);
+      }
+    };
+
+    fetchGame();
     // Scroll to top when loading new game
     window.scrollTo({ top: 0, behavior: "instant" as any });
   }, [gameId]);
@@ -93,22 +107,34 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     setZipLoading(false);
     setZipError(null);
 
-    if (!game || !game.isZipGame) return;
+    if (!game || !game.isZipGame || !hasStarted) return;
 
     let isSubscribed = true;
     setZipLoading(true);
 
     const loadAndExtractZip = async () => {
       try {
-        const zipBlob = await getGameZIP(game.id);
-        if (!zipBlob) {
-          throw new Error("Could not find game ZIP package in browser storage. Please upload again.");
+        if (!game.zipUrl) {
+          throw new Error("No ZIP URL found for this game. Please re-upload the ZIP file via the Admin Dashboard.");
         }
 
         if (!isSubscribed) return;
 
+        console.log("Downloading ZIP from UploadThing...", game.zipUrl);
+        const zipBlob = await getGameZIP(game.zipUrl);
+        if (!zipBlob) {
+          throw new Error("Could not download game ZIP package from UploadThing server.");
+        }
         const jszip = new JSZip();
-        const zip = await jszip.loadAsync(zipBlob);
+
+        console.log("Parsing ZIP blob...");
+        // Add timeout to JSZip as well
+        const zip = await Promise.race([
+          jszip.loadAsync(zipBlob),
+          new Promise<any>((_, reject) => setTimeout(() => reject(new Error("ZIP parsing timed out.")), 15000))
+        ]);
+
+        console.log("ZIP parsed successfully. Finding index.html...");
 
         // Find index.html recursively, ignoring macOS metadata folders & dotfiles
         const fileNames = Object.keys(zip.files);
@@ -147,41 +173,38 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           }
         };
 
-        // Extract non-html files first to build our lookup table, ignoring macOS metadata files
-        const extractionPromises = fileNames
-          .filter((name) => {
-            const isDir = zip.files[name].dir;
-            const isMeta = name.toLowerCase().includes("__macosx") || name.split("/").pop()?.startsWith("._");
-            return !isDir && !isMeta && name !== indexPath;
-          })
-          .map(async (name) => {
-            const file = zip.files[name];
-            const mimeType = getMimeType(name);
-            const content = await file.async("blob");
-            const blob = new Blob([content], { type: mimeType });
-            const url = URL.createObjectURL(blob);
+        // Extract non-html files sequentially to prevent browser OOM crashes on large games
+        const filesToExtract = fileNames.filter((name) => {
+          const isDir = zip.files[name].dir;
+          const isMeta = name.toLowerCase().includes("__macosx") || name.split("/").pop()?.startsWith("._");
+          return !isDir && !isMeta && name !== indexPath;
+        });
 
-            if (isSubscribed) {
-              objectUrlsRef.current.push(url);
+        for (const name of filesToExtract) {
+          if (!isSubscribed) break;
+          const file = zip.files[name];
+          const mimeType = getMimeType(name);
+          const content = await file.async("blob");
+          const blob = new Blob([content], { type: mimeType });
+          const url = URL.createObjectURL(blob);
 
-              // 1. Original ZIP name reference
-              pathMap[name] = url;
+          objectUrlsRef.current.push(url);
 
-              // 2. Normalized path reference (forward slashes)
-              const normalized = name.replace(/\\/g, "/");
-              pathMap[normalized] = url;
-              pathMap[`./${normalized}`] = url;
+          // 1. Original ZIP name reference
+          pathMap[name] = url;
 
-              // 3. Nested relative reference (if index.html is located in a subfolder)
-              if (baseDir && normalized.startsWith(baseDir)) {
-                const relativeToHtml = normalized.substring(baseDir.length);
-                pathMap[relativeToHtml] = url;
-                pathMap[`./${relativeToHtml}`] = url;
-              }
-            }
-          });
+          // 2. Normalized path reference (forward slashes)
+          const normalized = name.replace(/\\/g, "/");
+          pathMap[normalized] = url;
+          pathMap[`./${normalized}`] = url;
 
-        await Promise.all(extractionPromises);
+          // 3. Nested relative reference (if index.html is located in a subfolder)
+          if (baseDir && normalized.startsWith(baseDir)) {
+            const relativeToHtml = normalized.substring(baseDir.length);
+            pathMap[relativeToHtml] = url;
+            pathMap[`./${relativeToHtml}`] = url;
+          }
+        }
 
         if (!isSubscribed) return;
 
@@ -516,28 +539,17 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               overflow: hidden !important;
               background-color: transparent !important;
             }
-            /* Make sure all body direct children/wrappers occupy full screen absolutely to prevent layout shrinking cycles */
-            body > * {
-              width: 100% !important;
-              height: 100% !important;
-              position: absolute !important;
-              top: 0 !important;
-              left: 0 !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              box-sizing: border-box !important;
-            }
-            /* Stretch canvas to fill the viewport completely while maintaining aspect ratio via object-fit */
+            /* Stretch canvas to fill the viewport completely without covering loading screens */
             canvas {
               width: 100% !important;
               height: 100% !important;
-              position: absolute !important;
-              top: 0 !important;
-              left: 0 !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              object-fit: contain !important;
-              box-sizing: border-box !important;
+              display: block !important;
+              object-fit: fill !important;
+            }
+            /* Ensure the game container also takes full width if they use one */
+            #unity-container, #game-container, .game-container {
+              width: 100% !important;
+              height: 100% !important;
             }
           </style>
         `;
@@ -576,12 +588,12 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
         // Walk the indexText and replace static relative paths in script, link, img, audio, video elements!
         // Resiliently handles quotes (double, single, none), query parameters, and hashes.
         for (const [relativePath, blobUrl] of Object.entries(pathMap)) {
-          const escapedPath = relativePath.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\\\$&");
+          const escapedPath = relativePath.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
 
-          const attrRegex = new RegExp(`(src|href|value|data)\\s*=\\s*(["']?)(\\\\.\\\\/|\\\\/)?${escapedPath}(\\\\?[^"'>\\s]*)?(#[^"'>\\s]*)?\\\\2`, "gi");
+          const attrRegex = new RegExp("(src|href|value|data)\\s*=\\s*([\"']?)(\\.\\/|\\/)?" + escapedPath + "(\\?[^\"'>\\s]*)?(#[^\"'>\\s]*)?\\2", "gi");
           indexText = indexText.replace(attrRegex, `$1="${blobUrl}"`);
 
-          const urlRegex = new RegExp(`url\\s*\\(\\s*['"]?(\\\\.\\\\/|\\\\/)?${escapedPath}(\\\\?[^'")]*)?(#[^'")]*)?['"]?\\s*\\)`, "gi");
+          const urlRegex = new RegExp("url\\s*\\(\\s*['\"]?(\\.\\/|\\/)?" + escapedPath + "(\\?[^'\")]*)?(#[^'\")]*)?['\"]?\\s*\\)", "gi");
           indexText = indexText.replace(urlRegex, `url("${blobUrl}")`);
         }
 
@@ -639,18 +651,49 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
   // Handle browser fullscreen changes
   useEffect(() => {
+    let escToastTimer: any;
+    let barHideTimer: any;
+    let focusTimer: any;
+
     const handleFullscreenChange = () => {
-      const isCurrentlyFullscreen = !!document.fullscreenElement;
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+      
       setIsFullscreen(isCurrentlyFullscreen);
+      
       if (isCurrentlyFullscreen) {
         setShowEscToast(true);
-        const timer = setTimeout(() => {
+        
+        // Auto-hide the premium toolbar after 3 seconds so it does not obstruct the gameplay UI
+        barHideTimer = setTimeout(() => {
+          setIsBarHidden(true);
+        }, 3000);
+
+        // Hide the ESC full screen toast guide after 3 seconds
+        escToastTimer = setTimeout(() => {
           setShowEscToast(false);
         }, 3000);
-        return () => clearTimeout(timer);
+
+        // Auto-focus the game iframe so that keyboard keys (arrows) work immediately
+        focusTimer = setTimeout(() => {
+          if (iframeRef.current) {
+            iframeRef.current.focus();
+          }
+        }, 300);
       } else {
         setShowEscToast(false);
         setIsBarHidden(false); // Reset bar hidden state when exiting fullscreen
+        
+        // Re-focus the iframe when returning to regular page view
+        focusTimer = setTimeout(() => {
+          if (iframeRef.current) {
+            iframeRef.current.focus();
+          }
+        }, 300);
       }
     };
 
@@ -664,21 +707,60 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
       document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
       document.removeEventListener("mozfullscreenchange", handleFullscreenChange);
       document.removeEventListener("MSFullscreenChange", handleFullscreenChange);
+      clearTimeout(escToastTimer);
+      clearTimeout(barHideTimer);
+      clearTimeout(focusTimer);
     };
   }, []);
 
-  // Handle Escape key for CSS fallback fullscreen
+  // Handle keyboard event scroll blocking and Escape key in fullscreen mode
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isFullscreen) {
-        setIsFullscreen(false);
-        setIsBarHidden(false);
-        if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+      if (isFullscreen) {
+        // Prevent scrolling of parent window when pressing standard game arrow buttons or Spacebar
+        if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.key)) {
+          if (iframeRef.current && document.activeElement === iframeRef.current) {
+            return;
+          }
+          e.preventDefault();
+          // Ensure game iframe keeps active focus
+          if (iframeRef.current && document.activeElement !== iframeRef.current) {
+            iframeRef.current.focus();
+          }
+        }
+        
+        if (e.key === "Escape") {
+          setIsFullscreen(false);
+          setIsBarHidden(false);
+          if (document.exitFullscreen) document.exitFullscreen().catch(() => { });
+        }
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
+    
+    window.addEventListener("keydown", handleKeyDown, { passive: false });
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isFullscreen]);
+
+  // Handle mobile landscape physical device orientation resize & fallback rotation
+  useEffect(() => {
+    if (!isFullscreen) {
+      setIsLandscapeRotationRequired(false);
+      return;
+    }
+    const checkOrientation = () => {
+      const isMobile = window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
+      if (isMobile && !game?.isPortrait) {
+        // If holding vertically (portrait) but game is landscape, require CSS rotation fallback
+        const isDevicePortrait = window.innerHeight > window.innerWidth;
+        setIsLandscapeRotationRequired(isDevicePortrait);
+      } else {
+        setIsLandscapeRotationRequired(false);
+      }
+    };
+    checkOrientation();
+    window.addEventListener("resize", checkOrientation);
+    return () => window.removeEventListener("resize", checkOrientation);
+  }, [isFullscreen, game]);
 
   if (!game) return null;
 
@@ -686,24 +768,73 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const totalVotes = game.likes + game.dislikes;
   const ratingPercentage = totalVotes > 0 ? Math.round((game.likes / totalVotes) * 100) : 100;
 
-  const handleVote = (voteType: "like" | "dislike") => {
-    const updated = submitVoteDB(game.id, voteType);
-    if (updated) {
-      setGame(updated);
+  const handleVote = async (voteType: "like" | "dislike") => {
+    try {
+      const updated = await submitVoteDB(game.id, voteType);
+      if (updated) {
+        setGame(updated);
+      }
+    } catch (err) {
+      console.error("Failed to submit vote to Firebase", err);
     }
   };
 
-  const handleFullscreen = () => {
+  const handleStartPlay = async () => {
+    setHasStarted(true);
+
+    const isMobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
+    if (isMobile) {
+      const el = playerFrameRef.current as any;
+      if (el) {
+        try {
+          if (el.requestFullscreen) {
+            await el.requestFullscreen().catch(() => {});
+          } else if (el.webkitRequestFullscreen) {
+            await el.webkitRequestFullscreen();
+          } else if (el.msRequestFullscreen) {
+            await el.msRequestFullscreen();
+          }
+          
+          setIsFullscreen(true);
+
+          if (screen.orientation && screen.orientation.lock) {
+            const orientationMode = game?.isPortrait ? "portrait" : "landscape";
+            await screen.orientation.lock(orientationMode).catch((err) => {
+              console.warn("Screen orientation lock failed:", err);
+            });
+          }
+        } catch (err) {
+          console.warn("Mobile fullscreen or orientation lock failed:", err);
+        }
+      }
+    }
+  };
+
+  const handleFullscreen = async () => {
     const el = playerFrameRef.current as any;
     if (el) {
-      if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
-      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-      else if (el.msRequestFullscreen) el.msRequestFullscreen();
+      try {
+        if (el.requestFullscreen) await el.requestFullscreen().catch(() => {});
+        else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
+        else if (el.msRequestFullscreen) await el.msRequestFullscreen();
+        
+        setIsFullscreen(true);
+
+        const isMobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
+        if (isMobile && screen.orientation && screen.orientation.lock) {
+          const orientationMode = game?.isPortrait ? "portrait" : "landscape";
+          await screen.orientation.lock(orientationMode).catch((err) => {
+            console.warn("Screen orientation lock failed:", err);
+          });
+        }
+      } catch (err) {
+        console.warn("Fullscreen request failed:", err);
+      }
     }
   };
 
   const handleExitFullscreen = () => {
-    if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    if (document.exitFullscreen) document.exitFullscreen().catch(() => { });
     else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
     else if ((document as any).msExitFullscreen) (document as any).msExitFullscreen();
   };
@@ -749,8 +880,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   // Resolve precise aspect ratio style based on game metadata to prevent black spacing
   const isPortraitMode = isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait;
   const gameAspect = game.aspectRatio || (game.isPortrait ? "9:16" : "16:9");
-  
-  let aspectClass = "aspect-video"; 
+
+  let aspectClass = "aspect-video";
   if (isPortraitMode) {
     if (gameAspect === "3:4") {
       aspectClass = "aspect-[3/4]";
@@ -763,6 +894,34 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
   return (
     <div className="relative w-full text-white pb-16">
+      <style>{`
+        @media (max-width: 767px) {
+          .rotate-landscape-mobile {
+            transform: rotate(90deg) !important;
+            transform-origin: center !important;
+            width: 100vh !important;
+            height: 100vw !important;
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            margin-top: -50vh !important;
+            margin-left: -50vw !important;
+            z-index: 9999 !important;
+          }
+        }
+      `}</style>
+
+      {/* Extremely tiny, discrete exit button at the edge of the screen in fullscreen mode */}
+      {isFullscreen && (
+        <button
+          onClick={toggleFullscreen}
+          className="fixed top-2.5 right-2.5 z-[99999] flex items-center justify-center w-8 h-8 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white/90 shadow-[0_4px_12px_rgba(0,0,0,0.5)] active:scale-90 transition-all hover:scale-105 cursor-pointer select-none"
+          title="Exit Fullscreen"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      )}
+
       {/* Floating Share Link Toast */}
       <AnimatePresence>
         {shareToast && (
@@ -811,42 +970,25 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
         )}
       </AnimatePresence>
 
-      {/* Back Header Nav bar */}
-      <div className="flex items-center justify-between mb-5">
-        <button
-          onClick={onBackToHome}
-          className="flex items-center gap-2 text-sm font-semibold text-white/50 hover:text-white transition-colors group py-1.5"
-        >
-          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-          Back to Homepage
-        </button>
-        <div className="flex items-center gap-2 text-xs font-mono text-white/40">
-          <span>Zylo Arcade</span>
-          <span>•</span>
-          <span className="text-electric-blue">{game.genre}</span>
-          <span>•</span>
-          <span>{game.plays} Plays</span>
-        </div>
-      </div>
-
-      {/* Game Layout Block */}
-      <div ref={containerRef} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* CENTER VIEWPORT (10 cols in LG) */}
-        <div className="lg:col-span-10 flex flex-col">
-          {/* Dedicated Player Frame wrapper - supports standard and fullscreen theater displays */}
-          <div 
-            ref={playerFrameRef}
-            className={`relative w-full transition-all duration-500 overflow-hidden ${
-              isFullscreen 
-                ? `fixed inset-0 z-50 flex flex-col items-center justify-center bg-black transition-all duration-300 ${
-                    isBarHidden ? "p-0" : "p-0 pb-[88px]"
-                  }`
-                : "flex flex-col bg-[#030303] shadow-[0_15px_40px_rgba(0,0,0,0.85)] z-20"
+      {/* Game Player Frame Block - Spans 100% full width at the top */}
+      <div ref={containerRef} className="w-full flex flex-col mb-8">
+        {/* Dedicated Player Frame wrapper - supports standard and fullscreen theater displays */}
+        <div
+          ref={playerFrameRef}
+          onClick={() => {
+            if (isFullscreen && iframeRef.current) {
+              iframeRef.current.focus();
+            }
+          }}
+          className={`relative w-full transition-all duration-500 overflow-hidden ${isFullscreen
+            ? `fixed inset-0 z-50 flex flex-col items-center justify-center bg-black transition-all duration-300 ${isBarHidden ? "p-0" : "p-0 pb-[64px]"
+            }`
+            : "flex flex-col bg-[#0b0b12]/80 border-2 border-white/20 shadow-[0_25px_60px_rgba(0,0,0,0.8)] rounded-2xl z-20 overflow-hidden"
             }`}
-          >
+        >
             {/* Ambient Blurred Background backdrop (shown in fullscreen or portrait mode) */}
             {((isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait) || isFullscreen) && (
-              <div 
+              <div
                 className={`absolute inset-0 bg-cover bg-center ${game.portraitBackground ? 'blur-none opacity-100' : 'blur-[30px] opacity-40'} scale-105 pointer-events-none transition-all duration-700 z-0`}
                 style={{ backgroundImage: `url(${game.portraitBackground || game.banner || game.thumbnail})` }}
               >
@@ -876,11 +1018,11 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
             {/* Hover show bar sensor / Chevron handle when bar is hidden in fullscreen */}
             {isFullscreen && isBarHidden && (
-              <div 
+              <div
                 onMouseEnter={() => setIsBarHidden(false)}
                 className="fixed bottom-0 left-0 right-0 h-8 z-[60] flex items-center justify-center cursor-pointer group"
               >
-                <button 
+                <button
                   onClick={() => setIsBarHidden(false)}
                   className="flex items-center gap-1.5 px-3 py-1 rounded-t-lg bg-[#07070a] border border-white/10 border-b-0 text-white/40 group-hover:text-white/80 transition-all shadow-[0_-5px_15px_rgba(0,0,0,0.5)] text-[9px] uppercase tracking-widest font-black font-mono"
                 >
@@ -892,21 +1034,20 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
 
             {/* Dynamic Iframe Viewport Frame */}
-            <div 
-              className={`relative overflow-hidden z-10 ${
-                isPortraitMode
-                  ? isFullscreen 
-                    ? `w-full h-full md:h-full md:w-auto ${aspectClass} mx-auto flex-shrink-0 bg-transparent` 
-                    : `h-[75vh] md:h-[85vh] w-auto max-w-full ${aspectClass} mx-auto flex-shrink-0 bg-transparent`
-                  : isFullscreen
-                    ? "w-full h-full flex-shrink-0 bg-black"
-                    : "w-full aspect-video flex-shrink-0 bg-black"
-              }`}
+            <div
+              className={`relative overflow-hidden z-10 ${isLandscapeRotationRequired ? "rotate-landscape-mobile" : ""} ${isPortraitMode
+                ? isFullscreen
+                  ? `w-full h-full md:h-full md:w-auto ${aspectClass} mx-auto flex-shrink-0 bg-transparent`
+                  : `h-[68vh] md:h-[72vh] w-auto max-w-full ${aspectClass} mx-auto flex-shrink-0 bg-transparent`
+                : isFullscreen
+                  ? "w-full h-full flex-shrink-0 bg-black"
+                  : `w-full max-w-5xl aspect-video mx-auto flex-shrink-0 bg-black rounded-xl shadow-2xl border border-white/10`
+                }`}
             >
               {/* Screen static scanner overlay */}
               <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[size:100%_4px] opacity-10 pointer-events-none z-10" />
 
-              {zipLoading && (
+              {hasStarted && zipLoading && (
                 <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center gap-4 z-30">
                   <div className="w-12 h-12 rounded-full border-2 border-t-electric-blue border-r-neon-purple border-b-white/10 border-l-white/10 animate-spin shadow-[0_0_15px_rgba(0,240,255,0.3)]" />
                   <div className="flex flex-col items-center gap-1">
@@ -920,7 +1061,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 </div>
               )}
 
-              {zipError && (
+              {hasStarted && zipError && (
                 <div className="absolute inset-0 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center gap-4 z-30 p-6 text-center">
                   <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
                     <AlertTriangle className="w-6 h-6" />
@@ -937,7 +1078,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               )}
 
               {/* Iframe Loading Overlay */}
-              {!isIframeLoaded && !zipLoading && !zipError && (
+              {hasStarted && !isIframeLoaded && !zipLoading && !zipError && (
                 <div className="absolute inset-0 bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center gap-4 z-20 transition-opacity duration-500">
                   <div className="w-16 h-16 rounded-3xl border-2 border-t-electric-blue border-r-neon-purple border-b-transparent border-l-transparent animate-spin shadow-[0_0_20px_rgba(99,102,241,0.2)]" />
                   <span className="text-xs font-heading font-black tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50 animate-pulse">
@@ -946,19 +1087,105 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 </div>
               )}
 
-              {(!game.isZipGame || zipIframeUrl) && (
-                <iframe
-                  ref={iframeRef}
-                  src={game.isZipGame ? zipIframeUrl! : game.iframeUrl}
-                  onLoad={() => setIsIframeLoaded(true)}
-                  className="w-full h-full border-none relative z-0 transition-opacity duration-700 ease-in-out"
-                  style={{ opacity: isIframeLoaded ? 1 : 0 }}
-                  allow="autoplay; fullscreen; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
-                  allowFullScreen
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-top-navigation-by-user-activation allow-downloads"
-                  scrolling="no"
-                  title={game.title}
-                />
+              {hasStarted ? (
+                (!game.isZipGame || zipIframeUrl) && (
+                  <iframe
+                    ref={iframeRef}
+                    src={game.isZipGame ? zipIframeUrl! : game.iframeUrl}
+                    onLoad={() => setIsIframeLoaded(true)}
+                    className="w-full h-full border-none relative z-0 transition-opacity duration-700 ease-in-out"
+                    style={{ opacity: isIframeLoaded ? 1 : 0 }}
+                    allow="autoplay; fullscreen; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
+                    allowFullScreen
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-top-navigation-by-user-activation allow-downloads"
+                    scrolling="no"
+                    title={game.title}
+                  />
+                )
+              ) : (
+                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center overflow-hidden bg-black/85 rounded-xl">
+                  {/* Sleek blurred backdrop of the game banner or thumbnail */}
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center blur-[12px] opacity-40 scale-105 pointer-events-none"
+                    style={{ backgroundImage: `url(${game.banner || game.thumbnail})` }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/80 to-black z-10 pointer-events-none" />
+                  
+                  {/* Central Cyberpunk Interactive Cover Card */}
+                  <div className="relative z-20 flex flex-col items-center max-w-md px-6 text-center select-none">
+                    <motion.div 
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.5 }}
+                      className="relative group mb-4"
+                    >
+                      {/* Glowing background halo */}
+                      <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-electric-blue to-neon-purple opacity-40 blur-lg group-hover:opacity-75 transition duration-500" />
+                      <img 
+                        src={game.thumbnail} 
+                        alt={game.title} 
+                        className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border border-white/20 shadow-2xl animate-pulse-subtle"
+                      />
+                    </motion.div>
+                    
+                    <motion.h2 
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.1, duration: 0.5 }}
+                      className="text-xl sm:text-2xl font-heading font-black text-white uppercase italic tracking-wider leading-tight mb-0.5"
+                    >
+                      {game.title}
+                    </motion.h2>
+                    
+                    <motion.p 
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.2, duration: 0.5 }}
+                      className="text-[10px] sm:text-xs text-white/50 font-semibold mb-3 font-mono"
+                    >
+                      By {game.developer} • {game.plays} Plays
+                    </motion.p>
+                    
+                    {/* Device Mode Notice Badges */}
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.25 }}
+                      className="flex flex-wrap items-center justify-center gap-2 mb-5"
+                    >
+                      <span className="flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 text-[8px] sm:text-[9px] font-extrabold uppercase tracking-widest bg-white/5 text-white/70 border border-white/10 rounded-md">
+                        {game.isPortrait ? (
+                          <>
+                            <Smartphone size={10} className="text-electric-blue" />
+                            Portrait Mode
+                          </>
+                        ) : (
+                          <>
+                            <Laptop size={10} className="text-neon-purple" />
+                            Landscape Mode
+                          </>
+                        )}
+                      </span>
+                      <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 text-[8px] sm:text-[9px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md">
+                        ★ {ratingPercentage}% Score
+                      </span>
+                    </motion.div>
+                    
+                    <motion.button
+                      onClick={handleStartPlay}
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: [0.95, 1.05, 0.95], opacity: 1 }}
+                      transition={{ 
+                        opacity: { duration: 0.5 },
+                        scale: { repeat: Infinity, duration: 2.5, ease: "easeInOut" }
+                      }}
+                      className="group relative flex items-center justify-center gap-2.5 px-6 py-3.5 sm:px-8 sm:py-4 bg-gradient-to-r from-electric-blue via-neon-cyan to-neon-purple text-white font-heading font-black text-[11px] sm:text-xs uppercase tracking-widest rounded-xl shadow-[0_0_20px_rgba(0,240,255,0.4)] cursor-pointer hover:brightness-110 active:scale-95 transition-all"
+                    >
+                      <Gamepad className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-12 transition-transform duration-300" />
+                      <span>PLAY NOW</span>
+                    </motion.button>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -975,68 +1202,76 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             )}
 
             {/* Premium Action Control Toolbar */}
-            <div 
-              className={`flex flex-wrap items-center justify-between gap-4 transition-all duration-500 z-30 ${
-                isFullscreen 
-                  ? `absolute bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-40px)] max-w-5xl rounded-2xl bg-[#0a0a0f]/95 backdrop-blur-2xl border border-white/[0.08] shadow-[0_10px_40px_rgba(0,0,0,0.85)] p-4 ${
-                      isBarHidden ? "translate-y-36 opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
-                    }`
-                  : "w-full bg-[#0a0a0f] border-t border-white/[0.04] shadow-[0_-4px_20px_rgba(0,0,0,0.4)] px-4 py-3 sm:px-6 relative z-20"
-              }`}
+            <div
+              className={`flex items-center justify-between gap-4 transition-all duration-500 z-30 ${isFullscreen
+                ? `absolute bottom-0 left-0 w-full rounded-none bg-[#09090e]/95 backdrop-blur-2xl border-t border-white/[0.08] shadow-[0_-5px_30px_rgba(0,0,0,0.8)] px-4 py-3 sm:px-6 ${isBarHidden ? "translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+                }`
+                : "w-full bg-[#0e0e18] border-t-2 border-white/20 shadow-[0_-4px_20px_rgba(0,0,0,0.4)] px-4 py-2 sm:px-6 relative z-20"
+                }`}
             >
               {/* Left toolbar details */}
-              <div className="flex items-center gap-3 select-none">
-                {isFullscreen && (
-                  <img 
-                    src={game.thumbnail} 
-                    alt="" 
-                    className="w-10 h-10 rounded-lg object-cover border border-white/10 shrink-0 shadow-md animate-pulse-subtle"
-                  />
-                )}
-                <div className="flex flex-col">
-                  <h2 className="text-base md:text-lg font-heading font-black text-white uppercase italic tracking-wider leading-none flex items-center gap-2">
+              <div className="flex items-center gap-3 select-none min-w-0">
+                <img
+                  src={game.thumbnail}
+                  alt=""
+                  className="w-8 h-8 rounded-md object-cover border border-white/10 shrink-0 shadow-md"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800";
+                  }}
+                />
+                <div className="flex flex-col min-w-0">
+                  <h2 className="text-sm sm:text-base font-heading font-black text-white uppercase italic tracking-wider leading-none flex items-center gap-2 truncate">
                     {game.title}
                     {isFullscreen && (
-                      <span className="text-[9px] font-extrabold uppercase tracking-widest bg-white/10 text-white/70 px-1.5 py-0.5 rounded font-mono">
+                      <span className="text-[8px] font-extrabold uppercase tracking-widest bg-white/10 text-white/70 px-1.5 py-0.5 rounded font-mono">
                         LIVE
                       </span>
                     )}
                   </h2>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span className="text-[10px] font-semibold text-white/40 font-mono">{game.developer}</span>
-                    <span className="text-[10px] text-white/20">•</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[9px] font-semibold text-white/40 font-mono">{game.developer}</span>
+                    <span className="text-[9px] text-white/20">•</span>
                     <div className="flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="text-[10px] font-bold text-emerald-400 font-mono">{ratingPercentage}% Rating</span>
+                      <span className="text-[9px] font-bold text-emerald-400 font-mono">{ratingPercentage}% Rating</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Middle: 'Hide this bar' Button (fullscreen only) */}
+              {/* Center Hide Button (Poki Style - only in full screen) */}
               {isFullscreen && (
-                <div className="flex-1 hidden md:flex items-center justify-center">
+                <div className="absolute left-1/2 -translate-x-1/2 hidden md:block">
                   <button
                     onClick={() => setIsBarHidden(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/[0.08] text-white/50 hover:text-white hover:bg-white/[0.08] hover:border-white/20 transition-all text-[11px] font-bold uppercase tracking-wider cursor-pointer shadow-lg group font-mono"
+                    className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-white/60 hover:text-white hover:bg-white/[0.08] hover:border-white/20 hover:scale-105 transition-all text-[10px] font-bold uppercase tracking-wider cursor-pointer shadow-sm font-mono animate-fade-in"
                   >
-                    <EyeOff className="w-3.5 h-3.5 group-hover:scale-105 transition-transform" />
-                    Hide this bar
+                    <EyeOff className="w-3.5 h-3.5" />
+                    <span>Hide this bar</span>
                   </button>
                 </div>
               )}
 
               {/* Right toolbar actions */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 sm:gap-3 ml-auto shrink-0">
+                {/* Mobile Fallback Hide Button */}
+                {isFullscreen && (
+                  <button
+                    onClick={() => setIsBarHidden(true)}
+                    className="md:hidden flex items-center gap-1.5 p-2 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/60 hover:text-white transition-all cursor-pointer"
+                    title="Hide Toolbar"
+                  >
+                    <EyeOff className="w-4 h-4" />
+                  </button>
+                )}
                 {/* Like / Dislike Button Groups */}
                 <div className="flex items-center rounded-lg bg-white/[0.03] p-0.5 border border-white/[0.06]">
                   <button
                     onClick={() => handleVote("like")}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md transition-all text-xs font-bold cursor-pointer ${
-                      game.userVote === "like"
-                        ? "bg-emerald-500/20 text-emerald-400 shadow-inner animate-pulse-subtle"
-                        : "text-white/40 hover:text-white/80 hover:bg-white/[0.02]"
-                    }`}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md transition-all text-xs font-bold cursor-pointer ${game.userVote === "like"
+                      ? "bg-emerald-500/20 text-emerald-400 shadow-inner animate-pulse-subtle"
+                      : "text-white/40 hover:text-white/80 hover:bg-white/[0.02]"
+                      }`}
                     title="Like this game"
                   >
                     <ThumbsUp className="w-3.5 h-3.5" />
@@ -1045,11 +1280,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   <div className="w-[1px] h-3.5 bg-white/10" />
                   <button
                     onClick={() => handleVote("dislike")}
-                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md transition-all text-xs font-bold cursor-pointer ${
-                      game.userVote === "dislike"
-                        ? "bg-red-500/20 text-red-400 shadow-inner animate-pulse-subtle"
-                        : "text-white/40 hover:text-white/80 hover:bg-white/[0.02]"
-                    }`}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md transition-all text-xs font-bold cursor-pointer ${game.userVote === "dislike"
+                      ? "bg-red-500/20 text-red-400 shadow-inner animate-pulse-subtle"
+                      : "text-white/40 hover:text-white/80 hover:bg-white/[0.02]"
+                      }`}
                     title="Dislike this game"
                   >
                     <ThumbsDown className="w-3.5 h-3.5" />
@@ -1060,11 +1294,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 {/* Favorite Heart Toggle */}
                 <button
                   onClick={() => setIsFavorited(!isFavorited)}
-                  className={`hidden sm:flex p-2.5 rounded-lg border transition-all cursor-pointer ${
-                    isFavorited
-                      ? "bg-red-500/20 border-red-500/30 text-red-400 shadow-[0_0_12px_rgba(239,68,68,0.2)] animate-pulse-subtle"
-                      : "bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06]"
-                  }`}
+                  className={`hidden sm:flex p-2.5 rounded-lg border transition-all cursor-pointer ${isFavorited
+                    ? "bg-red-500/20 border-red-500/30 text-red-400 shadow-[0_0_12px_rgba(239,68,68,0.2)] animate-pulse-subtle"
+                    : "bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06]"
+                    }`}
                   title={isFavorited ? "Remove from Favorites" : "Add to Favorites"}
                 >
                   <Heart className={`w-3.5 h-3.5 transition-transform ${isFavorited ? "fill-red-400 text-red-400 scale-105" : ""}`} />
@@ -1073,11 +1306,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 {/* Report alert trigger */}
                 <button
                   onClick={handleReport}
-                  className={`hidden sm:flex p-2.5 rounded-lg border transition-all cursor-pointer ${
-                    showReportToast
-                      ? "bg-amber-500/20 border-amber-500/30 text-amber-400 animate-pulse"
-                      : "bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06]"
-                  }`}
+                  className={`hidden sm:flex p-2.5 rounded-lg border transition-all cursor-pointer ${showReportToast
+                    ? "bg-amber-500/20 border-amber-500/30 text-amber-400 animate-pulse"
+                    : "bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06]"
+                    }`}
                   title="Report issues/bugs"
                 >
                   <AlertTriangle className="w-3.5 h-3.5" />
@@ -1105,11 +1337,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 {/* Rotation/Device Layout Toggle */}
                 <button
                   onClick={() => setIsPortraitOverride(isPortraitOverride === null ? !(isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait) : !isPortraitOverride)}
-                  className={`p-2.5 rounded-lg border transition-all cursor-pointer ${
-                    (isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait)
-                      ? "bg-neon-purple/20 border-neon-purple/30 text-neon-purple shadow-[0_0_12px_rgba(168,85,247,0.2)]" 
-                      : "bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06]"
-                  }`}
+                  className={`p-2.5 rounded-lg border transition-all cursor-pointer ${(isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait)
+                    ? "bg-neon-purple/20 border-neon-purple/30 text-neon-purple shadow-[0_0_12px_rgba(168,85,247,0.2)]"
+                    : "bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06]"
+                    }`}
                   title="Rotate Device Orientation"
                 >
                   <Smartphone className="w-3.5 h-3.5" />
@@ -1118,11 +1349,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 {/* Fullscreen Toggle */}
                 <button
                   onClick={toggleFullscreen}
-                  className={`p-2.5 rounded-lg border transition-all cursor-pointer ${
-                    isFullscreen 
-                      ? "bg-electric-blue/20 border-electric-blue/30 text-electric-blue shadow-[0_0_12px_rgba(99,102,241,0.2)]"
-                      : "bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06]"
-                  }`}
+                  className={`p-2.5 rounded-lg border transition-all cursor-pointer ${isFullscreen
+                    ? "bg-electric-blue/20 border-electric-blue/30 text-electric-blue shadow-[0_0_12px_rgba(99,102,241,0.2)]"
+                    : "bg-white/[0.03] border-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.06]"
+                    }`}
                   title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Mode"}
                 >
                   {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
@@ -1130,31 +1360,11 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               </div>
             </div>
           </div>
-        </div>
 
-        {/* SIDE SUGGESTIONS BAR (2 cols in LG) */}
-        <div className="lg:col-span-2 flex flex-col h-full bg-[#07070c] border border-white/[0.08] rounded-2xl p-4 shadow-xl z-20">
-          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-white/[0.06]">
-            <Gamepad className="w-4 h-4 text-electric-blue animate-pulse-subtle" />
-            <h3 className="text-sm font-heading font-black tracking-wider uppercase text-white/90">
-              Play Next Suggestions
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2.5 overflow-y-auto max-h-[620px] custom-scrollbar pr-1">
-            {suggestions.map((sug, idx) => (
-              <div key={sug.id} onClick={() => onSelectGame(sug.id)} className="h-full flex">
-                <GameTile game={sug} index={idx} compact={true} />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Deep details and FAQs row */}
-      <div className="mt-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Specification and Game details columns (8 cols) */}
-        <div className="lg:col-span-8 flex flex-col gap-10">
+      {/* Split Content Grid: Left specs and details, Right suggestions & developer widget */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* LEFT COLUMN: Specs & Details (9 cols) */}
+        <div className="lg:col-span-9 flex flex-col gap-8">
 
           {/* Segment 1: Technical Specs Overview */}
           <section className="p-6 rounded-2xl bg-[#07070a]/60 border border-white/[0.04] backdrop-blur-xl">
@@ -1285,8 +1495,28 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           )}
         </div>
 
-        {/* Sticky side specs dashboard widget (4 cols) */}
-        <div className="lg:col-span-4 flex flex-col gap-5 lg:sticky lg:top-24">
+        {/* RIGHT COLUMN: Play Next & Developer widget (3 cols) */}
+        <div className="lg:col-span-3 flex flex-col gap-6 lg:sticky lg:top-24">
+          
+          {/* Play Next Suggestions Widget */}
+          <div className="flex flex-col bg-[#07070c] border border-white/[0.08] rounded-2xl p-4 shadow-xl z-20">
+            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/[0.06]">
+              <Gamepad className="w-4 h-4 text-electric-blue animate-pulse-subtle" />
+              <h3 className="text-sm font-heading font-black tracking-wider uppercase text-white/90">
+                Play Next
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-3.5 max-h-[360px] overflow-y-auto custom-scrollbar pr-1">
+              {suggestions.map((sug, idx) => (
+                <div key={sug.id} onClick={() => onSelectGame(sug.id)} className="h-full flex cursor-pointer">
+                  <GameTile game={sug} index={idx} compact={true} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Developer Info Widget */}
           <div className="p-6 rounded-2xl bg-gradient-to-br from-[#07070a]/80 to-[#0c0c14]/40 border border-white/[0.06] shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-electric-blue/10 to-transparent blur-xl" />
 
@@ -1326,6 +1556,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

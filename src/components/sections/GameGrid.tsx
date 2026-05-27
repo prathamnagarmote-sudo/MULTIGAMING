@@ -24,7 +24,7 @@ export function GameGrid({ title, subtitle, games, icon, showViewAll = true, onS
   if (games.length === 0) return null;
 
   return (
-    <section className="mb-10">
+    <section className="mb-8 bg-[#0b0b12]/40 backdrop-blur-md border border-white/[0.05] p-4 sm:p-6 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] hover:border-white/[0.08] hover:shadow-[0_12px_45px_rgba(0,0,0,0.6)] transition-all duration-300">
       {/* Section Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
