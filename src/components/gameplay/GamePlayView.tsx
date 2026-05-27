@@ -572,132 +572,130 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             })();
           </script>
           <style id="zylo-sandbox-canvas-fix">
+            /* Minimal CSS reset — the JS scaler handles all sizing */
             html, body {
-              width: 100vw !important;
-              height: 100dvh !important;
               margin: 0 !important;
               padding: 0 !important;
               overflow: hidden !important;
               background: #000 !important;
             }
-            /* All direct children of body fill viewport - covers most game root containers */
-            body > div, body > main, body > section, body > canvas {
-              position: absolute !important;
-              inset: 0 !important;
-              width: 100vw !important;
-              height: 100dvh !important;
-              overflow: hidden !important;
-            }
-            canvas {
-              display: block !important;
-              max-width: 100vw !important;
-              max-height: 100dvh !important;
-            }
-            /* Named container IDs used by popular game engines */
-            #unity-container, #game-container, .game-container, #app, #root,
-            #phaser-game, .phaser-game, #canvas-holder, #game, #GameCanvas,
-            #GameDiv, #GameWrapper, #gamediv, #gamecanvas {
-              width: 100vw !important;
-              height: 100dvh !important;
-              position: absolute !important;
-              inset: 0 !important;
-            }
+            /* Inject viewport meta for games that omit it */
           </style>
-          <script id="zylo-mobile-scaler">
+          <script id="zylo-universal-scaler">
             (function() {
-              // Only run on mobile devices
-              if (!/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return;
-              
-              // Inject viewport meta if missing (some games omit it)
-              var existingMeta = document.querySelector('meta[name="viewport"]');
-              if (!existingMeta) {
+              // Inject viewport meta if missing (many games omit this)
+              if (!document.querySelector('meta[name="viewport"]')) {
                 var meta = document.createElement('meta');
                 meta.name = 'viewport';
                 meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
-                document.head && document.head.appendChild(meta);
+                (document.head || document.documentElement).appendChild(meta);
               }
 
               var scaled = false;
-              
+
+              // Core scaling function: scales the <html> element to fit the game canvas
+              // into the iframe viewport. This is the Poki-style approach that works with
+              // any game engine (Phaser, Unity, custom) on both desktop and mobile.
               function scaleGameToViewport() {
-                if (scaled) return;
+                if (scaled) return false;
+
+                var canvas = null;
+                var naturalW = 0, naturalH = 0;
+
+                // Find first canvas with valid buffer dimensions
                 var canvases = document.querySelectorAll('canvas');
-                if (canvases.length === 0) return;
-                
                 for (var i = 0; i < canvases.length; i++) {
-                  var canvas = canvases[i];
-                  // Use the canvas buffer dimensions (set by the game engine)
-                  var naturalW = canvas.width;
-                  var naturalH = canvas.height;
-                  if (naturalW < 10 || naturalH < 10) continue;
-                  
-                  var vw = window.innerWidth;
-                  var vh = window.innerHeight;
-                  
-                  // Calculate scale to fill viewport while preserving game aspect ratio
-                  var scale = Math.min(vw / naturalW, vh / naturalH);
-                  
-                  // Walk up to find the topmost game wrapper div (direct child of body)
-                  var wrapper = canvas;
-                  while (wrapper.parentElement && wrapper.parentElement !== document.body) {
-                    wrapper = wrapper.parentElement;
+                  var c = canvases[i];
+                  if (c.width >= 10 && c.height >= 10) {
+                    canvas = c;
+                    naturalW = c.width;
+                    naturalH = c.height;
+                    break;
                   }
-                  
-                  // Reset the wrapper to its natural size then scale it to fill the screen
-                  wrapper.style.setProperty('position', 'absolute', 'important');
-                  wrapper.style.setProperty('width', naturalW + 'px', 'important');
-                  wrapper.style.setProperty('height', naturalH + 'px', 'important');
-                  wrapper.style.setProperty('transform', 'scale(' + scale + ')', 'important');
-                  wrapper.style.setProperty('transform-origin', 'top left', 'important');
-                  // Center the scaled wrapper
-                  var offsetX = (vw - naturalW * scale) / 2;
-                  var offsetY = (vh - naturalH * scale) / 2;
-                  wrapper.style.setProperty('top', offsetX < 0 ? '0' : offsetY + 'px', 'important');
-                  wrapper.style.setProperty('left', offsetX < 0 ? '0' : offsetX + 'px', 'important');
-                  
-                  scaled = true;
-                  break;
+                }
+
+                // Fallback: try to measure first canvas by getBoundingClientRect
+                if (!canvas && canvases.length > 0) {
+                  var rect = canvases[0].getBoundingClientRect();
+                  if (rect.width >= 10 && rect.height >= 10) {
+                    canvas = canvases[0];
+                    naturalW = rect.width;
+                    naturalH = rect.height;
+                  }
+                }
+
+                if (!naturalW || !naturalH) return false;
+
+                var vw = window.innerWidth;
+                var vh = window.innerHeight;
+
+                // Calculate uniform scale factor to fit game into viewport (letterboxing)
+                var scale = Math.min(vw / naturalW, vh / naturalH);
+
+                var scaledW = Math.floor(naturalW * scale);
+                var scaledH = Math.floor(naturalH * scale);
+
+                // Center offsets
+                var offsetX = Math.floor((vw - scaledW) / 2);
+                var offsetY = Math.floor((vh - scaledH) / 2);
+
+                // Scale the root html element — safest universal approach
+                // This avoids touching any of the game's internal layout
+                var html = document.documentElement;
+                html.style.setProperty('width', naturalW + 'px', 'important');
+                html.style.setProperty('height', naturalH + 'px', 'important');
+                html.style.setProperty('overflow', 'hidden', 'important');
+                html.style.setProperty('position', 'fixed', 'important');
+                html.style.setProperty('top', (offsetY >= 0 ? offsetY : 0) + 'px', 'important');
+                html.style.setProperty('left', (offsetX >= 0 ? offsetX : 0) + 'px', 'important');
+                html.style.setProperty('transform', 'scale(' + scale + ')', 'important');
+                html.style.setProperty('transform-origin', 'top left', 'important');
+
+                // Also ensure body fills the html element
+                document.body.style.setProperty('width', '100%', 'important');
+                document.body.style.setProperty('height', '100%', 'important');
+                document.body.style.setProperty('margin', '0', 'important');
+                document.body.style.setProperty('overflow', 'hidden', 'important');
+
+                scaled = true;
+                return true;
+              }
+
+              // Retry loop — poll until canvas appears and has valid dimensions
+              var attempts = 0;
+              var maxAttempts = 20;
+              function tryScale() {
+                if (scaled || attempts >= maxAttempts) return;
+                attempts++;
+                if (!scaleGameToViewport()) {
+                  setTimeout(tryScale, 400);
                 }
               }
-              
-              // Try scaling at multiple points in time as the game initializes
-              document.addEventListener('DOMContentLoaded', function() {
-                setTimeout(scaleGameToViewport, 100);
-                setTimeout(scaleGameToViewport, 500);
-                setTimeout(scaleGameToViewport, 1500);
+
+              document.addEventListener('DOMContentLoaded', function() { setTimeout(tryScale, 50); });
+              window.addEventListener('load', function() { if (!scaled) tryScale(); });
+
+              // MutationObserver for games that dynamically create canvas after load
+              var observer = new MutationObserver(function() {
+                if (!scaled) setTimeout(scaleGameToViewport, 200);
               });
-              window.addEventListener('load', function() {
-                setTimeout(scaleGameToViewport, 200);
-                setTimeout(scaleGameToViewport, 1000);
-                setTimeout(scaleGameToViewport, 3000);
-              });
-              
-              // Watch for canvas elements being dynamically added (lazy-init games)
-              var observer = new MutationObserver(function(mutations) {
-                for (var m = 0; m < mutations.length; m++) {
-                  for (var n = 0; n < mutations[m].addedNodes.length; n++) {
-                    var node = mutations[m].addedNodes[n];
-                    if (node.tagName === 'CANVAS' || (node.querySelector && node.querySelector('canvas'))) {
-                      setTimeout(scaleGameToViewport, 300);
-                      return;
-                    }
-                  }
-                }
-              });
-              
+              function attachObserver() {
+                observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+              }
               if (document.body) {
-                observer.observe(document.body, { childList: true, subtree: true });
+                attachObserver();
               } else {
-                document.addEventListener('DOMContentLoaded', function() {
-                  observer.observe(document.body, { childList: true, subtree: true });
-                });
+                document.addEventListener('DOMContentLoaded', attachObserver);
               }
-              
-              // Re-scale on orientation change
-              window.addEventListener('orientationchange', function() {
+
+              // Re-scale on orientation change and resize
+              function onResize() {
                 scaled = false;
-                setTimeout(scaleGameToViewport, 500);
-              });
+                attempts = 0;
+                setTimeout(tryScale, 300);
+              }
+              window.addEventListener('orientationchange', onResize);
+              window.addEventListener('resize', onResize);
             })();
           </script>
         `;
