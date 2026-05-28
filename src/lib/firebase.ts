@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -15,5 +15,17 @@ const firebaseConfig = {
 // Initialize Firebase only if it hasn't been initialized yet
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-export const db = getFirestore(app);
+// Use initializeFirestore with force long polling to bypass network/VPN/proxy blockages,
+// and make it HMR-safe for Next.js hot reloading by catching any re-initialization errors.
+export const db = (() => {
+  try {
+    return initializeFirestore(app, {
+      experimentalForceLongPolling: true,
+      experimentalAutoDetectLongPolling: true,
+    });
+  } catch (e) {
+    return getFirestore(app);
+  }
+})();
+
 export const storage = getStorage(app);
