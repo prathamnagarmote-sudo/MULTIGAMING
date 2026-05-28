@@ -1008,39 +1008,35 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
           /*
            * CrazyGames-style safe area bar:
-           * Zone 1 (padding-top) = env(safe-area-inset-top) → clears the notch/punch-hole
-           * Zone 2 (content)     = 24px button row → holds the Exit button below the camera cutout
-           * Total bar height     = safe-area-inset + 24px
+           * The bar height perfectly dynamically adapts to the notch size: max(env(safe-area-inset-top, 0px), 36px).
+           * The Exit button is aligned to the bottom of the safe area space with 6px spacing,
+           * so it fits snugly and beautifully beside/below the camera/punch-hole without vertical bloat.
            */
           .mobile-safe-area-bar {
             display: flex;
-            flex-direction: column;
+            align-items: flex-end;
+            justify-content: flex-start;
             box-sizing: border-box;
-            /* Push content below the notch/punch-hole */
-            padding-top: env(safe-area-inset-top, 0px);
+            height: max(env(safe-area-inset-top, 0px), 36px);
+            padding: 0 12px 6px 12px;
+            background: #000000;
+            z-index: 9999;
           }
 
-          /* The visible button row that sits right below the notch */
-          .mobile-safe-area-row {
-            display: flex;
-            align-items: center;
-            height: 24px;
-            padding: 0 8px;
-          }
-
-          /* Exit button — clearly visible, properly sized */
+          /* Exit button — optimized size, premium gradient style matching CrazyGames level */
           .mobile-exit-btn {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            height: 20px;
-            padding: 0 10px;
-            border-radius: 5px;
+            justify-content: center;
+            gap: 5px;
+            height: 24px;
+            padding: 0 12px;
+            border-radius: 6px;
             background: #7c3aed;
             color: white;
             font-family: system-ui, -apple-system, sans-serif;
             font-weight: 700;
-            font-size: 10px;
+            font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             border: none;
@@ -1048,6 +1044,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             transition: background 0.15s, transform 0.1s;
             -webkit-tap-highlight-color: transparent;
             flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
           }
           .mobile-exit-btn:active {
             transform: scale(0.94);
@@ -1056,8 +1053,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
           /* Exit icon */
           .mobile-exit-icon {
-            width: 11px;
-            height: 11px;
+            width: 12px;
+            height: 12px;
             flex-shrink: 0;
           }
         }
@@ -1178,22 +1175,19 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             )}
 
 
-            {/* Mobile Fullscreen Safe Area Top Bar — CrazyGames-style two-zone approach */}
+            {/* Mobile Fullscreen Safe Area Top Bar — CrazyGames-level dynamic safe area bar */}
             {isFullscreen && isMobileDevice && (
               <div className="absolute top-0 left-0 right-0 bg-black z-50 select-none mobile-safe-area-bar">
-                {/* Zone 2: visible button row below the notch */}
-                <div className="mobile-safe-area-row">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFullscreen();
-                    }}
-                    className="mobile-exit-btn"
-                  >
-                    <LogOut style={{ transform: "scaleX(-1)" }} className="mobile-exit-icon" />
-                    <span>Exit</span>
-                  </button>
-                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFullscreen();
+                  }}
+                  className="mobile-exit-btn"
+                >
+                  <LogOut style={{ transform: "scaleX(-1)" }} className="mobile-exit-icon" />
+                  <span>Exit</span>
+                </button>
               </div>
             )}
 
@@ -1207,7 +1201,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               }}
               style={
                 isFullscreen && isMobileDevice && isPortraitMode
-                  ? { top: 'calc(env(safe-area-inset-top, 0px) + 24px)' }
+                  ? { top: 'max(env(safe-area-inset-top, 0px), 36px)' }
                   : {}
               }
               className={`overflow-hidden z-10 ${
@@ -1291,7 +1285,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                       title={game.title}
                     />
 
-                    {/* Premium Focus & Interaction Overlay for Desktop */}
+                    {/* Premium Focus & Interaction Overlay for Desktop & Mobile */}
                     {!isInteracting && isIframeLoaded && (
                       <div 
                         className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[3px] border-2 border-dashed border-electric-blue/40 rounded-xl pointer-events-none group transition-all duration-300 hover:bg-black/75 hover:border-electric-blue/80"
@@ -1306,13 +1300,29 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                           </div>
                           
                           <span className="text-sm font-heading font-black tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-electric-blue to-neon-cyan drop-shadow-[0_2px_4px_rgba(0,240,255,0.2)]">
-                            Click to Play & Interact
+                            {isMobileDevice ? "Tap to Play & Interact" : "Click to Play & Interact"}
                           </span>
                           <span className="text-[10px] text-white/50 leading-relaxed font-mono">
-                            Locks keyboard & mouse to the game. Move cursor out of the game area to scroll the page.
+                            {isMobileDevice 
+                              ? "Locks inputs to the game. To scroll the page, tap the 'Scroll Page' button at the top-right." 
+                              : "Locks keyboard & mouse to the game. Move cursor out of the game area to scroll the page."}
                           </span>
                         </div>
                       </div>
+                    )}
+
+                    {/* Mobile Unlock Scroll Overlay Button */}
+                    {isMobileDevice && isGameInteracting && !isFullscreen && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsGameInteracting(false);
+                        }}
+                        className="absolute top-3 right-3 z-[40] flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/85 backdrop-blur-md border border-white/20 text-white/95 active:scale-95 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] cursor-pointer"
+                      >
+                        <EyeOff className="w-3.5 h-3.5 text-electric-blue" />
+                        <span className="text-[10px] font-black font-heading uppercase tracking-wider">Scroll Page</span>
+                      </button>
                     )}
                   </>
                 )
