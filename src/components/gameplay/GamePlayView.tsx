@@ -895,9 +895,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
   const handleStartPlay = async () => {
     const mobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
-    // On mobile: set fullscreen first so the container is ready, then start loading
+    // On mobile: trigger true native HTML5 fullscreen right from the user click interaction to hide address bars
     if (mobile) {
-      setIsFullscreen(true);
+      await handleFullscreen();
     }
     setHasStarted(true);
     setIsGameInteracting(true);
