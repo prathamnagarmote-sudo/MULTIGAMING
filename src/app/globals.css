@@ -181,11 +181,9 @@ html {
   }
 }
 
-/* Prevent overscroll bounce & horizontal zoom overflow on mobile */
+/* Prevent horizontal zoom overflow on mobile while preserving native momentum scrolling */
 html, body {
-  overscroll-behavior: none;
-  overflow-x: hidden;
-  width: 100%;
+  /* Native scrolling defaults */
 }
 
 /* Game iframe touch handling */

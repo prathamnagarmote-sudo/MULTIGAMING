@@ -167,7 +167,7 @@ export default function Home() {
       <div className="fixed inset-0 bg-[#08080c] -z-10" />
 
       {/* Main App Shell */}
-      <div className="relative w-full min-h-screen flex flex-col">
+      <div className="relative w-full min-h-screen flex flex-col overflow-x-hidden">
         {/* Global Top Bar - Spans full width at the very top of the viewport */}
         <TopBar
           currentView={activeView}

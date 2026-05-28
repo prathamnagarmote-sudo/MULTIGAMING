@@ -826,6 +826,11 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
         setShowEscToast(false);
         setIsBarHidden(false); // Reset bar hidden state when exiting fullscreen
         
+        // On mobile, automatically unlock pointer events when exiting fullscreen to ensure the page can be scrolled
+        if (isMobileDevice) {
+          setIsGameInteracting(false);
+        }
+        
         // Re-focus the iframe when returning to regular page view
         focusTimer = setTimeout(() => {
           if (iframeRef.current) {
@@ -1008,17 +1013,17 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
           /*
            * CrazyGames-style safe area bar:
-           * The bar height perfectly dynamically adapts to the notch size: max(env(safe-area-inset-top, 0px), 36px).
-           * The Exit button is aligned to the bottom of the safe area space with 6px spacing,
-           * so it fits snugly and beautifully beside/below the camera/punch-hole without vertical bloat.
+           * The bar height perfectly adapts to the exit button: exactly 30px high.
+           * The Exit button is vertically centered inside this compact space, leaving exactly
+           * 3px margin above/below. This allows it to sit perfectly aligned with the camera hole/notch.
            */
           .mobile-safe-area-bar {
             display: flex;
-            align-items: flex-end;
+            align-items: center;
             justify-content: flex-start;
             box-sizing: border-box;
-            height: max(env(safe-area-inset-top, 0px), 36px);
-            padding: 0 12px 6px 12px;
+            height: 30px;
+            padding: 0 10px;
             background: #000000;
             z-index: 9999;
           }
@@ -1030,15 +1035,13 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             justify-content: center;
             gap: 5px;
             height: 24px;
-            padding: 0 12px;
-            border-radius: 6px;
+            padding: 0 10px;
+            border-radius: 5px;
             background: #7c3aed;
             color: white;
             font-family: system-ui, -apple-system, sans-serif;
             font-weight: 700;
             font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
             border: none;
             cursor: pointer;
             transition: background 0.15s, transform 0.1s;
@@ -1195,13 +1198,17 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             <div
               onClick={() => {
                 if (!isInteracting && isIframeLoaded) {
-                  setIsGameInteracting(true);
-                  setTimeout(() => iframeRef.current?.focus(), 50);
+                  if (isMobileDevice) {
+                    toggleFullscreen();
+                  } else {
+                    setIsGameInteracting(true);
+                    setTimeout(() => iframeRef.current?.focus(), 50);
+                  }
                 }
               }}
               style={
                 isFullscreen && isMobileDevice && isPortraitMode
-                  ? { top: 'max(env(safe-area-inset-top, 0px), 36px)' }
+                  ? { top: '30px' }
                   : {}
               }
               className={`overflow-hidden z-10 ${
