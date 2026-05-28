@@ -1005,8 +1005,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const isPortraitMode = isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait;
   const gameAspect = game.aspectRatio || (game.isPortrait ? "9:16" : "16:9");
 
-  // A game is interacting in fullscreen, or when desktop/mobile user explicitly clicks to focus/play
-  const isInteracting = isGameInteracting || isFullscreen;
 
   let aspectClass = "aspect-video";
   if (isPortraitMode) {
@@ -1178,9 +1176,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             {/* Dynamic Iframe Viewport Frame */}
             <div
               onClick={() => {
-                if (!isInteracting && isIframeLoaded) {
-                  setIsGameInteracting(true);
-                  setTimeout(() => iframeRef.current?.focus(), 50);
+                if (isIframeLoaded) {
+                  iframeRef.current?.focus();
                 }
               }}
               style={
@@ -1251,48 +1248,20 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 // For ZIP games: show iframe once blobUrl is ready
                 // For URL games: show iframe immediately once hasStarted
                 (!game.isZipGame || zipIframeUrl) && (
-                  <>
-                    <iframe
-                      ref={iframeRef}
-                      {...(game.isZipGame
-                        ? { src: zipIframeUrl! }
-                        // URL game: use the configured iframe URL
-                        : { src: getSecureIframeUrl(game.iframeUrl) }
-                      )}
-                      onLoad={() => setIsIframeLoaded(true)}
-                      className={`w-full h-full border-none relative z-0 ${
-                        !isInteracting ? "pointer-events-none" : "pointer-events-auto"
-                      }`}
-                      allow="autoplay; fullscreen; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
-                      allowFullScreen
-                      scrolling="yes"
-                      title={game.title}
-                    />
-
-                    {/* Premium Focus & Interaction Overlay for Desktop */}
-                    {!isInteracting && isIframeLoaded && (
-                      <div 
-                        className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[3px] border-2 border-dashed border-electric-blue/40 rounded-xl pointer-events-none group transition-all duration-300 hover:bg-black/75 hover:border-electric-blue/80"
-                      >
-                        <div className="flex flex-col items-center gap-3 p-6 text-center select-none max-w-sm">
-                          {/* Glowing animated Gamepad icon */}
-                          <div className="relative">
-                            <div className="absolute -inset-2 rounded-full bg-electric-blue/20 blur-md group-hover:bg-electric-blue/40 transition duration-300" />
-                            <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-r from-electric-blue to-neon-purple flex items-center justify-center border border-white/10 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                              <Gamepad className="w-6 h-6 sm:w-7 sm:h-7 text-white animate-pulse" />
-                            </div>
-                          </div>
-                          
-                          <span className="text-sm font-heading font-black tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-electric-blue to-neon-cyan drop-shadow-[0_2px_4px_rgba(0,240,255,0.2)]">
-                            Click to Play & Interact
-                          </span>
-                          <span className="text-[10px] text-white/50 leading-relaxed font-mono">
-                            Locks keyboard & mouse to the game. Move cursor out of the game area to scroll the page.
-                          </span>
-                        </div>
-                      </div>
+                  <iframe
+                    ref={iframeRef}
+                    {...(game.isZipGame
+                      ? { src: zipIframeUrl! }
+                      // URL game: use the configured iframe URL
+                      : { src: getSecureIframeUrl(game.iframeUrl) }
                     )}
-                  </>
+                    onLoad={() => setIsIframeLoaded(true)}
+                    className="w-full h-full border-none relative z-0 pointer-events-auto"
+                    allow="autoplay; fullscreen; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
+                    allowFullScreen
+                    scrolling="yes"
+                    title={game.title}
+                  />
                 )
               ) : (
                 <div className="absolute inset-0 z-30 flex flex-col items-center justify-center overflow-hidden bg-black/85 rounded-xl">
