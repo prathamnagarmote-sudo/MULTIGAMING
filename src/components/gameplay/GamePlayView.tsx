@@ -588,11 +588,11 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               width: 100% !important;
               height: 100% !important;
             }
-            /* Hardware accelerated scaling via object-fit contain */
+            /* Hardware accelerated scaling via object-fit fill */
             canvas {
               width: 100% !important;
               height: 100% !important;
-              object-fit: contain !important;
+              object-fit: fill !important;
               display: block !important;
               margin: auto !important;
             }
@@ -621,7 +621,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   c.style.setProperty('height', '100%', 'important');
                   c.style.setProperty('max-width', '100%', 'important');
                   c.style.setProperty('max-height', '100%', 'important');
-                  c.style.setProperty('object-fit', 'contain', 'important');
+                  c.style.setProperty('object-fit', 'fill', 'important');
                   c.style.setProperty('display', 'block', 'important');
                   c.style.setProperty('margin', 'auto', 'important');
                 }
@@ -975,8 +975,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const isPortraitMode = isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait;
   const gameAspect = game.aspectRatio || (game.isPortrait ? "9:16" : "16:9");
 
-  // A game is interacting on mobile, in fullscreen, or when desktop user explicitly clicks to focus/play
-  const isInteracting = isGameInteracting || isMobileDevice || isFullscreen;
+  // A game is interacting in fullscreen, or when desktop/mobile user explicitly clicks to focus/play
+  const isInteracting = isGameInteracting || isFullscreen;
 
   let aspectClass = "aspect-video";
   if (isPortraitMode) {
@@ -1226,7 +1226,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                       }`}
                       allow="autoplay; fullscreen; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
                       allowFullScreen
-                      scrolling="no"
+                      scrolling="yes"
                       title={game.title}
                     />
 
@@ -1342,20 +1342,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               )}
             </div>
 
-            {/* Extremely tiny, discrete exit button at the edge of the screen in fullscreen mode */}
-            {isFullscreen && (
-              <button
-                onClick={toggleFullscreen}
-                className={`absolute z-[99999] md:hidden flex items-center justify-center w-7 h-7 rounded-full bg-black/40 border border-white/10 text-white/80 active:scale-90 transition-all select-none cursor-pointer hover:scale-105 hover:bg-black/60 ${
-                  isPortraitMode 
-                    ? "top-2.5 left-2.5" 
-                    : "top-2.5 left-1/2 -translate-x-1/2"
-                }`}
-                title="Exit Fullscreen"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+
 
             {/* Mobile Fullscreen Floating Button — always visible on touch devices */}
             {!isFullscreen && (
