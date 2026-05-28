@@ -1006,32 +1006,43 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             z-index: 9999 !important;
           }
 
-          /* Safe area bar — height is exactly the device's notch/punch-hole inset */
+          /*
+           * CrazyGames-style safe area bar:
+           * Zone 1 (padding-top) = env(safe-area-inset-top) → clears the notch/punch-hole
+           * Zone 2 (content)     = 24px button row → holds the Exit button below the camera cutout
+           * Total bar height     = safe-area-inset + 24px
+           */
           .mobile-safe-area-bar {
             display: flex;
-            align-items: center;
-            padding-left: 6px;
-            padding-right: 6px;
+            flex-direction: column;
             box-sizing: border-box;
+            /* Push content below the notch/punch-hole */
+            padding-top: env(safe-area-inset-top, 0px);
           }
 
-          /* Exit button — fills the safe area height with small vertical padding */
+          /* The visible button row that sits right below the notch */
+          .mobile-safe-area-row {
+            display: flex;
+            align-items: center;
+            height: 24px;
+            padding: 0 8px;
+          }
+
+          /* Exit button — clearly visible, properly sized */
           .mobile-exit-btn {
             display: inline-flex;
             align-items: center;
-            gap: 3px;
-            /* The button height is the bar height minus 2px top/bottom breathing room */
-            height: calc(env(safe-area-inset-top, 0px) - 4px);
-            max-height: 22px;
-            padding: 0 8px;
+            gap: 4px;
+            height: 20px;
+            padding: 0 10px;
             border-radius: 5px;
             background: #7c3aed;
             color: white;
             font-family: system-ui, -apple-system, sans-serif;
             font-weight: 700;
-            font-size: clamp(7px, calc(env(safe-area-inset-top, 16px) * 0.35), 11px);
+            font-size: 10px;
             text-transform: uppercase;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.05em;
             border: none;
             cursor: pointer;
             transition: background 0.15s, transform 0.1s;
@@ -1043,10 +1054,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             background: #6d28d9;
           }
 
-          /* Exit icon — proportional to the bar */
+          /* Exit icon */
           .mobile-exit-icon {
-            width: clamp(8px, calc(env(safe-area-inset-top, 16px) * 0.35), 13px);
-            height: clamp(8px, calc(env(safe-area-inset-top, 16px) * 0.35), 13px);
+            width: 11px;
+            height: 11px;
             flex-shrink: 0;
           }
         }
@@ -1167,25 +1178,22 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             )}
 
 
-            {/* Mobile Fullscreen Safe Area Top Bar — uses pure CSS env() for pixel-perfect fit */}
+            {/* Mobile Fullscreen Safe Area Top Bar — CrazyGames-style two-zone approach */}
             {isFullscreen && isMobileDevice && (
-              <div 
-                style={{ 
-                  height: 'env(safe-area-inset-top, 0px)',
-                  minHeight: '0px',
-                }}
-                className="absolute top-0 left-0 right-0 bg-black z-50 select-none mobile-safe-area-bar"
-              >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFullscreen();
-                  }}
-                  className="mobile-exit-btn"
-                >
-                  <LogOut style={{ transform: "scaleX(-1)" }} className="mobile-exit-icon" />
-                  <span>Exit</span>
-                </button>
+              <div className="absolute top-0 left-0 right-0 bg-black z-50 select-none mobile-safe-area-bar">
+                {/* Zone 2: visible button row below the notch */}
+                <div className="mobile-safe-area-row">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFullscreen();
+                    }}
+                    className="mobile-exit-btn"
+                  >
+                    <LogOut style={{ transform: "scaleX(-1)" }} className="mobile-exit-icon" />
+                    <span>Exit</span>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1199,7 +1207,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               }}
               style={
                 isFullscreen && isMobileDevice && isPortraitMode
-                  ? { top: 'env(safe-area-inset-top, 0px)' }
+                  ? { top: 'calc(env(safe-area-inset-top, 0px) + 24px)' }
                   : {}
               }
               className={`overflow-hidden z-10 ${
