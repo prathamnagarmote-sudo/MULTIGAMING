@@ -1126,8 +1126,11 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           }}
           style={isFullscreen && isMobileDevice ? { height: '100dvh', width: '100dvw', top: 0, left: 0 } : {}}
           className={`w-full overflow-hidden ${isFullscreen
-            ? `fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black ${isBarHidden ? "p-0" : "p-0 md:pb-[64px]"
-            }`
+            ? `fixed inset-0 z-[9999] flex flex-col bg-black ${
+                isMobileDevice 
+                  ? "items-stretch justify-start" 
+                  : `items-center justify-center ${isBarHidden ? "p-0" : "p-0 md:pb-[64px]"}`
+              }`
             : "relative flex flex-col bg-[#0b0b12]/80 border-2 border-white/20 shadow-[0_25px_60px_rgba(0,0,0,0.8)] rounded-2xl z-20 overflow-hidden"
             }`}
         >
@@ -1181,22 +1184,27 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             {/* Mobile Fullscreen Safe Area Top Bar */}
             {isFullscreen && isMobileDevice && (
               <div 
-                style={{ height: `${safeAreaTop}px` }}
-                className="absolute top-0 left-0 right-0 bg-black border-b border-white/[0.05] flex items-center justify-between z-50 select-none px-3"
+                style={{
+                  paddingTop: 'env(safe-area-inset-top, 0px)',
+                  minHeight: 'calc(env(safe-area-inset-top, 0px) + 24px)'
+                }}
+                className="w-full bg-black border-b border-white/[0.05] flex flex-col justify-end z-50 select-none flex-shrink-0"
               >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFullscreen();
-                  }}
-                  className="flex items-center gap-1.5 h-[18px] px-2.5 rounded-md bg-[#7c3aed] hover:bg-[#6d28d9] active:scale-95 text-white font-sans font-bold text-[8.5px] uppercase tracking-wider transition-all cursor-pointer border-none"
-                >
-                  <LogOut className="w-2.5 h-2.5" style={{ transform: "scaleX(-1)" }} />
-                  <span>Exit</span>
-                </button>
-                <span className="text-[8.5px] font-heading font-black text-white/30 uppercase tracking-widest leading-none pr-3 flex items-center h-full">
-                  {game.title}
-                </span>
+                <div className="h-[24px] w-full flex items-center justify-between px-3">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFullscreen();
+                    }}
+                    className="flex items-center gap-1.5 h-[18px] px-2.5 rounded bg-[#7c3aed] hover:bg-[#6d28d9] active:scale-95 text-white font-sans font-bold text-[8.5px] uppercase tracking-wider transition-all cursor-pointer border-none"
+                  >
+                    <LogOut className="w-2.5 h-2.5" style={{ transform: "scaleX(-1)" }} />
+                    <span>Exit</span>
+                  </button>
+                  <span className="text-[8.5px] font-heading font-black text-white/30 uppercase tracking-widest leading-none pr-1">
+                    {game.title}
+                  </span>
+                </div>
               </div>
             )}
 
@@ -1207,17 +1215,12 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   iframeRef.current?.focus();
                 }
               }}
-              style={
-                isFullscreen && isMobileDevice && isPortraitMode
-                  ? { top: `${safeAreaTop}px` }
-                  : {}
-              }
               className={`overflow-hidden z-10 ${
                 isFullscreen
                   ? isMobileDevice
                     ? isPortraitMode
-                      // Portrait game on mobile: fill the full screen vertically offset by dynamic safe-area height style
-                      ? "absolute bottom-0 left-0 right-0 w-full bg-black"
+                      // Portrait game on mobile: fill the remaining vertical flex space dynamically
+                      ? "relative flex-1 w-full bg-black"
                       // Landscape game on mobile: rotate 90deg to simulate landscape orientation
                       : "bg-black rotate-landscape-mobile"
                     : isPortraitMode
