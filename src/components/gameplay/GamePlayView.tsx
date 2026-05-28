@@ -90,63 +90,37 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     setIsMobileDevice(mobile);
   }, []);
 
-  // Measure the exact hardware safe-area top inset dynamically at runtime.
-  // This uses a probe element with env(safe-area-inset-top) and measures after
-  // layout settles — including after fullscreen transitions when the inset may change.
-  const [safeAreaTop, setSafeAreaTop] = useState(0);
-  const safeAreaProbeRef = useRef<HTMLDivElement | null>(null);
+  // Measure the exact hardware safe-area top inset dynamically at runtime
+  const [safeAreaTop, setSafeAreaTop] = useState(24);
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Create a persistent probe element rather than creating/destroying each time.
-    // This lets the browser resolve env() properly even across layout changes.
-    let probe = safeAreaProbeRef.current;
-    if (!probe) {
-      probe = document.createElement("div");
-      probe.setAttribute("id", "zylo-safe-area-probe");
-      probe.style.cssText = "position:fixed;top:0;left:0;width:0;pointer-events:none;visibility:hidden;z-index:-1;height:env(safe-area-inset-top, 0px);";
-      document.body.appendChild(probe);
-      safeAreaProbeRef.current = probe;
-    }
-
     const measureSafeArea = () => {
-      // Use rAF to ensure measurement happens after layout/paint
-      requestAnimationFrame(() => {
-        const measured = probe ? parseFloat(window.getComputedStyle(probe).height) || 0 : 0;
-        
-        // Determine a minimal fallback for devices where env() returns 0.
-        // These are non-notch devices that still need a tiny status-bar clearance.
-        let fallback = 4; // Minimal clearance for non-notch devices
-        
-        // Use hardware safe area exactly as reported — no extra buffer.
-        // The safe area inset already accounts for the exact notch/punch-hole boundary.
-        const finalHeight = measured > 0 ? measured : fallback;
-        setSafeAreaTop(finalHeight);
-      });
+      const div = document.createElement("div");
+      div.style.position = "fixed";
+      div.style.top = "0";
+      div.style.height = "env(safe-area-inset-top, 0px)";
+      div.style.visibility = "hidden";
+      document.body.appendChild(div);
+      
+      const computedHeight = parseInt(window.getComputedStyle(div).height) || 0;
+      document.body.removeChild(div);
+      
+      // If safe area top is 0 (no notch), fall back to a comfortable 22px for touch targets.
+      // Otherwise, match the dynamic safe-area height with an extra 4px padding so the Exit button
+      // sits comfortably clear of the notch boundary.
+      const dynamicHeight = computedHeight > 0 ? computedHeight + 1 : 16;
+      setSafeAreaTop(dynamicHeight);
     };
 
-    // Measure immediately
     measureSafeArea();
     
-    // Remeasure after a delay to catch post-fullscreen layout shifts
-    // (some mobile browsers adjust safe areas asynchronously after fullscreen)
-    const delayedMeasure = setTimeout(measureSafeArea, 300);
-    const delayedMeasure2 = setTimeout(measureSafeArea, 600);
-    
-    // Remeasure on orientation changes, resize, and fullscreen changes
+    // Remeasure on orientation changes and window resizing
     window.addEventListener("resize", measureSafeArea);
     window.addEventListener("orientationchange", measureSafeArea);
-    // Some browsers fire this when entering/exiting fullscreen API
-    document.addEventListener("fullscreenchange", measureSafeArea);
-    document.addEventListener("webkitfullscreenchange", measureSafeArea);
-    
     return () => {
-      clearTimeout(delayedMeasure);
-      clearTimeout(delayedMeasure2);
       window.removeEventListener("resize", measureSafeArea);
       window.removeEventListener("orientationchange", measureSafeArea);
-      document.removeEventListener("fullscreenchange", measureSafeArea);
-      document.removeEventListener("webkitfullscreenchange", measureSafeArea);
     };
   }, [isFullscreen]);
 
@@ -638,33 +612,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               window.addEventListener('wheel', function(e) {
                 window.parent.postMessage({ type: 'iframe-scroll', deltaY: e.deltaY }, '*');
               }, { passive: true });
-
-              // Forward vertical touch swipe movements to enable seamless page scrolling on mobile devices
-              var touchStartY = 0;
-              var touchStartX = 0;
-              window.addEventListener('touchstart', function(e) {
-                if (e.touches.length === 1) {
-                  touchStartY = e.touches[0].clientY;
-                  touchStartX = e.touches[0].clientX;
-                }
-              }, { passive: true });
-
-              window.addEventListener('touchmove', function(e) {
-                if (e.touches.length === 1) {
-                  var touchY = e.touches[0].clientY;
-                  var touchX = e.touches[0].clientX;
-                  var deltaY = touchStartY - touchY;
-                  var deltaX = touchStartX - touchX;
-                  
-                  // If the gesture is primarily vertical, forward the scroll to the parent page
-                  if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 4) {
-                    window.parent.postMessage({ type: 'iframe-scroll', deltaY: deltaY }, '*');
-                    // Update start point to allow continuous smooth scrolling
-                    touchStartY = touchY;
-                    touchStartX = touchX;
-                  }
-                }
-              }, { passive: true });
             })();
           </script>
           <style id="zylo-sandbox-canvas-fix">
@@ -1058,6 +1005,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const isPortraitMode = isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait;
   const gameAspect = game.aspectRatio || (game.isPortrait ? "9:16" : "16:9");
 
+  // A game is interacting in fullscreen, or when desktop/mobile user explicitly clicks to focus/play
+  const isInteracting = isGameInteracting || isFullscreen;
 
   let aspectClass = "aspect-video";
   if (isPortraitMode) {
@@ -1152,11 +1101,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           }}
           style={isFullscreen && isMobileDevice ? { height: '100dvh', width: '100dvw', top: 0, left: 0 } : {}}
           className={`w-full overflow-hidden ${isFullscreen
-            ? `fixed inset-0 z-[9999] flex flex-col bg-black ${
-                isMobileDevice 
-                  ? "items-stretch justify-start" 
-                  : `items-center justify-center ${isBarHidden ? "p-0" : "p-0 md:pb-[64px]"}`
-              }`
+            ? `fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black ${isBarHidden ? "p-0" : "p-0 md:pb-[64px]"
+            }`
             : "relative flex flex-col bg-[#0b0b12]/80 border-2 border-white/20 shadow-[0_25px_60px_rgba(0,0,0,0.8)] rounded-2xl z-20 overflow-hidden"
             }`}
         >
@@ -1207,48 +1153,47 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             )}
 
 
-            {/* Mobile Fullscreen Safe Area Top Bar — sits right at the notch/punch-hole line */}
+            {/* Mobile Fullscreen Safe Area Top Bar */}
             {isFullscreen && isMobileDevice && (
               <div 
-                style={{
-                  // paddingTop = exact hardware safe area (notch/punch-hole height).
-                  // The button row (18px) sits immediately below it — flush with the notch edge.
-                  height: `${safeAreaTop + 18}px`,
-                  paddingTop: `${safeAreaTop}px`,
-                }}
-                className="w-full bg-black border-b border-white/[0.06] flex flex-col justify-center z-50 select-none flex-shrink-0"
+                style={{ height: `${safeAreaTop}px` }}
+                className="absolute top-0 left-0 right-0 bg-black border-b border-white/[0.05] flex items-center justify-between z-50 select-none px-3"
               >
-                <div className="h-[18px] w-full flex items-center justify-between px-3">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFullscreen();
-                    }}
-                    className="flex items-center gap-1 h-[16px] px-2 rounded bg-[#7c3aed] hover:bg-[#6d28d9] active:scale-95 text-white font-sans font-bold text-[8px] uppercase tracking-wider transition-all cursor-pointer border-none"
-                  >
-                    <LogOut className="w-2.5 h-2.5" style={{ transform: "scaleX(-1)" }} />
-                    <span>Exit</span>
-                  </button>
-                  <span className="text-[7.5px] font-heading font-black text-white/25 uppercase tracking-widest leading-none pr-1 truncate max-w-[50%]">
-                    {game.title}
-                  </span>
-                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFullscreen();
+                  }}
+                  className="flex items-center gap-1 h-[13px] px-2 rounded bg-[#7c3aed] hover:bg-[#6d28d9] active:scale-95 text-white font-sans font-bold text-[7.5px] uppercase tracking-wider transition-all cursor-pointer border-none"
+                >
+                  <LogOut className="w-2 h-2" style={{ transform: "scaleX(-1)" }} />
+                  <span>Exit</span>
+                </button>
+                <span className="text-[7.5px] font-heading font-black text-white/30 uppercase tracking-widest leading-none pr-2 flex items-center h-full">
+                  {game.title}
+                </span>
               </div>
             )}
 
             {/* Dynamic Iframe Viewport Frame */}
             <div
               onClick={() => {
-                if (isIframeLoaded) {
-                  iframeRef.current?.focus();
+                if (!isInteracting && isIframeLoaded) {
+                  setIsGameInteracting(true);
+                  setTimeout(() => iframeRef.current?.focus(), 50);
                 }
               }}
+              style={
+                isFullscreen && isMobileDevice && isPortraitMode
+                  ? { top: `${safeAreaTop}px` }
+                  : {}
+              }
               className={`overflow-hidden z-10 ${
                 isFullscreen
                   ? isMobileDevice
                     ? isPortraitMode
-                      // Portrait game on mobile: fill the remaining vertical flex space dynamically
-                      ? "relative flex-1 w-full bg-black"
+                      // Portrait game on mobile: fill the full screen vertically offset by dynamic safe-area height style
+                      ? "absolute bottom-0 left-0 right-0 w-full bg-black"
                       // Landscape game on mobile: rotate 90deg to simulate landscape orientation
                       : "bg-black rotate-landscape-mobile"
                     : isPortraitMode
@@ -1306,20 +1251,48 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 // For ZIP games: show iframe once blobUrl is ready
                 // For URL games: show iframe immediately once hasStarted
                 (!game.isZipGame || zipIframeUrl) && (
-                  <iframe
-                    ref={iframeRef}
-                    {...(game.isZipGame
-                      ? { src: zipIframeUrl! }
-                      // URL game: use the configured iframe URL
-                      : { src: getSecureIframeUrl(game.iframeUrl) }
+                  <>
+                    <iframe
+                      ref={iframeRef}
+                      {...(game.isZipGame
+                        ? { src: zipIframeUrl! }
+                        // URL game: use the configured iframe URL
+                        : { src: getSecureIframeUrl(game.iframeUrl) }
+                      )}
+                      onLoad={() => setIsIframeLoaded(true)}
+                      className={`w-full h-full border-none relative z-0 ${
+                        !isInteracting ? "pointer-events-none" : "pointer-events-auto"
+                      }`}
+                      allow="autoplay; fullscreen; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
+                      allowFullScreen
+                      scrolling="yes"
+                      title={game.title}
+                    />
+
+                    {/* Premium Focus & Interaction Overlay for Desktop */}
+                    {!isInteracting && isIframeLoaded && (
+                      <div 
+                        className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[3px] border-2 border-dashed border-electric-blue/40 rounded-xl pointer-events-none group transition-all duration-300 hover:bg-black/75 hover:border-electric-blue/80"
+                      >
+                        <div className="flex flex-col items-center gap-3 p-6 text-center select-none max-w-sm">
+                          {/* Glowing animated Gamepad icon */}
+                          <div className="relative">
+                            <div className="absolute -inset-2 rounded-full bg-electric-blue/20 blur-md group-hover:bg-electric-blue/40 transition duration-300" />
+                            <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-r from-electric-blue to-neon-purple flex items-center justify-center border border-white/10 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                              <Gamepad className="w-6 h-6 sm:w-7 sm:h-7 text-white animate-pulse" />
+                            </div>
+                          </div>
+                          
+                          <span className="text-sm font-heading font-black tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-electric-blue to-neon-cyan drop-shadow-[0_2px_4px_rgba(0,240,255,0.2)]">
+                            Click to Play & Interact
+                          </span>
+                          <span className="text-[10px] text-white/50 leading-relaxed font-mono">
+                            Locks keyboard & mouse to the game. Move cursor out of the game area to scroll the page.
+                          </span>
+                        </div>
+                      </div>
                     )}
-                    onLoad={() => setIsIframeLoaded(true)}
-                    className="w-full h-full border-none relative z-0 pointer-events-auto"
-                    allow="autoplay; fullscreen; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
-                    allowFullScreen
-                    scrolling="yes"
-                    title={game.title}
-                  />
+                  </>
                 )
               ) : (
                 <div className="absolute inset-0 z-30 flex flex-col items-center justify-center overflow-hidden bg-black/85 rounded-xl">
