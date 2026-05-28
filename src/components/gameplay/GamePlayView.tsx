@@ -1123,14 +1123,38 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             )}
 
 
+            {/* Mobile Fullscreen Safe Area Top Bar */}
+            {isFullscreen && isMobileDevice && (
+              <div className="absolute top-0 left-0 right-0 h-10 bg-black border-b border-white/[0.05] flex items-center justify-between px-3 z-50 select-none">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFullscreen();
+                  }}
+                  className="px-3.5 py-1.5 rounded-lg bg-[#0070f3] hover:bg-[#0051a3] active:scale-95 text-white font-sans font-extrabold text-[11px] uppercase tracking-wider transition-all shadow-md cursor-pointer"
+                >
+                  Exit
+                </button>
+                <span className="text-[10px] font-heading font-black text-white/40 uppercase tracking-widest leading-none">
+                  {game.title}
+                </span>
+              </div>
+            )}
+
             {/* Dynamic Iframe Viewport Frame */}
             <div
+              onClick={() => {
+                if (!isInteracting && isIframeLoaded) {
+                  setIsGameInteracting(true);
+                  setTimeout(() => iframeRef.current?.focus(), 50);
+                }
+              }}
               className={`relative overflow-hidden z-10 ${
                 isFullscreen
                   ? isMobileDevice
                     ? isPortraitMode
-                      // Portrait game on mobile: fill the full screen vertically
-                      ? "absolute inset-0 w-full h-full bg-black"
+                      // Portrait game on mobile: fill the full screen vertically offset by top bar
+                      ? "absolute top-10 bottom-0 left-0 right-0 w-full bg-black"
                       // Landscape game on mobile: rotate 90deg to simulate landscape orientation
                       : "bg-black rotate-landscape-mobile"
                     : isPortraitMode
@@ -1209,12 +1233,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                     {/* Premium Focus & Interaction Overlay for Desktop */}
                     {!isInteracting && isIframeLoaded && (
                       <div 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsGameInteracting(true);
-                          setTimeout(() => iframeRef.current?.focus(), 50);
-                        }}
-                        className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[3px] border-2 border-dashed border-electric-blue/40 rounded-xl cursor-pointer group transition-all duration-300 hover:bg-black/75 hover:border-electric-blue/80"
+                        className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[3px] border-2 border-dashed border-electric-blue/40 rounded-xl pointer-events-none group transition-all duration-300 hover:bg-black/75 hover:border-electric-blue/80"
                       >
                         <div className="flex flex-col items-center gap-3 p-6 text-center select-none max-w-sm">
                           {/* Glowing animated Gamepad icon */}
