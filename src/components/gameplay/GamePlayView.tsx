@@ -1164,9 +1164,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                     e.stopPropagation();
                     toggleFullscreen();
                   }}
-                  className="flex items-center gap-1 h-[13px] px-2 rounded bg-[#7c3aed] hover:bg-[#6d28d9] active:scale-95 text-white font-sans font-bold text-[7.5px] uppercase tracking-wider transition-all cursor-pointer border-none"
+                  className="flex items-center gap-1 h-[14px] px-2 rounded bg-[#7c3aed] hover:bg-[#6d28d9] active:scale-95 text-white font-sans font-bold text-[8px] uppercase tracking-wider transition-all cursor-pointer border-none"
                 >
-                  <LogOut className="w-2 h-2" style={{ transform: "scaleX(-1)" }} />
+                  <LogOut style={{ transform: "scaleX(-1)", width: "8.5px", height: "8.5px" }} />
                   <span>Exit</span>
                 </button>
                 <span className="text-[7.5px] font-heading font-black text-white/30 uppercase tracking-widest leading-none pr-2 flex items-center h-full">
