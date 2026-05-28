@@ -906,31 +906,26 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const handleFullscreen = async () => {
     const el = playerFrameRef.current as any;
     if (el) {
-      const isMobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
-      if (!isMobile) {
-        try {
-          if (el.requestFullscreen) await el.requestFullscreen().catch(() => {});
-          else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
-          else if (el.msRequestFullscreen) await el.msRequestFullscreen();
-        } catch (err) {
-          console.warn("Fullscreen request failed:", err);
-        }
+      try {
+        if (el.requestFullscreen) await el.requestFullscreen().catch(() => {});
+        else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
+        else if (el.msRequestFullscreen) await el.msRequestFullscreen();
+      } catch (err) {
+        console.warn("Fullscreen request failed:", err);
       }
       setIsFullscreen(true);
     }
   };
 
   const handleExitFullscreen = () => {
-    const isMobile = typeof window !== "undefined" && (window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
-    if (!isMobile) {
+    try {
       if (document.exitFullscreen) document.exitFullscreen().catch(() => { });
       else if ((document as any).webkitExitFullscreen) (document as any).webkitExitFullscreen();
       else if ((document as any).msExitFullscreen) (document as any).msExitFullscreen();
-    } else {
-      // On mobile we use CSS-only fullscreen (no native fullscreen API)
-      // so we MUST manually reset the isFullscreen state here
-      setIsFullscreen(false);
+    } catch (err) {
+      console.warn("Exit fullscreen failed:", err);
     }
+    setIsFullscreen(false);
   };
 
   const toggleFullscreen = () => {
@@ -1125,17 +1120,18 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
             {/* Mobile Fullscreen Safe Area Top Bar */}
             {isFullscreen && isMobileDevice && (
-              <div className="absolute top-0 left-0 right-0 h-10 bg-black border-b border-white/[0.05] flex items-center justify-between px-3 z-50 select-none">
+              <div className="absolute top-0 left-0 right-0 h-8 bg-black border-b border-white/[0.05] flex items-center justify-between px-3.5 z-50 select-none">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleFullscreen();
                   }}
-                  className="px-3.5 py-1.5 rounded-lg bg-[#0070f3] hover:bg-[#0051a3] active:scale-95 text-white font-sans font-extrabold text-[11px] uppercase tracking-wider transition-all shadow-md cursor-pointer"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#7c3aed] hover:bg-[#6d28d9] active:scale-95 text-white font-sans font-bold text-[9px] uppercase tracking-wider transition-all shadow-md cursor-pointer"
                 >
-                  Exit
+                  <Smartphone className="w-3 h-3" />
+                  <span>Exit</span>
                 </button>
-                <span className="text-[10px] font-heading font-black text-white/40 uppercase tracking-widest leading-none">
+                <span className="text-[9px] font-heading font-black text-white/30 uppercase tracking-widest leading-none">
                   {game.title}
                 </span>
               </div>
@@ -1154,7 +1150,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   ? isMobileDevice
                     ? isPortraitMode
                       // Portrait game on mobile: fill the full screen vertically offset by top bar
-                      ? "absolute top-10 bottom-0 left-0 right-0 w-full bg-black"
+                      ? "absolute top-8 bottom-0 left-0 right-0 w-full bg-black"
                       // Landscape game on mobile: rotate 90deg to simulate landscape orientation
                       : "bg-black rotate-landscape-mobile"
                     : isPortraitMode
