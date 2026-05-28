@@ -1149,7 +1149,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   setTimeout(() => iframeRef.current?.focus(), 50);
                 }
               }}
-              className={`relative overflow-hidden z-10 ${
+              className={`overflow-hidden z-10 ${
                 isFullscreen
                   ? isMobileDevice
                     ? isPortraitMode
@@ -1161,8 +1161,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                       ? "absolute inset-0 h-full w-auto aspect-[9/16] mx-auto flex-shrink-0 bg-black"
                       : "absolute inset-0 w-full h-full flex-shrink-0 bg-black"
                   : isPortraitMode
-                    ? `h-[68vh] md:h-[72vh] w-auto max-w-full ${aspectClass} mx-auto flex-shrink-0 bg-transparent`
-                    : `w-full max-w-5xl aspect-video mx-auto flex-shrink-0 bg-black rounded-xl shadow-2xl border border-white/10`
+                    ? `relative h-[68vh] md:h-[72vh] w-auto max-w-full ${aspectClass} mx-auto flex-shrink-0 bg-transparent`
+                    : `relative w-full max-w-5xl aspect-video mx-auto flex-shrink-0 bg-black rounded-xl shadow-2xl border border-white/10`
               }`}
             >
               {/* Screen static scanner overlay */}
