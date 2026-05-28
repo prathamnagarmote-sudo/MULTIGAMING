@@ -90,37 +90,77 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     setIsMobileDevice(mobile);
   }, []);
 
-  // Measure the exact hardware safe-area top inset dynamically at runtime
-  const [safeAreaTop, setSafeAreaTop] = useState(24);
+  // Measure the exact hardware safe-area top inset dynamically at runtime.
+  // This uses a probe element with env(safe-area-inset-top) and measures after
+  // layout settles — including after fullscreen transitions when the inset may change.
+  const [safeAreaTop, setSafeAreaTop] = useState(0);
+  const safeAreaProbeRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    // Create a persistent probe element rather than creating/destroying each time.
+    // This lets the browser resolve env() properly even across layout changes.
+    let probe = safeAreaProbeRef.current;
+    if (!probe) {
+      probe = document.createElement("div");
+      probe.setAttribute("id", "zylo-safe-area-probe");
+      probe.style.cssText = "position:fixed;top:0;left:0;width:0;pointer-events:none;visibility:hidden;z-index:-1;height:env(safe-area-inset-top, 0px);";
+      document.body.appendChild(probe);
+      safeAreaProbeRef.current = probe;
+    }
+
     const measureSafeArea = () => {
-      const div = document.createElement("div");
-      div.style.position = "fixed";
-      div.style.top = "0";
-      div.style.height = "env(safe-area-inset-top, 0px)";
-      div.style.visibility = "hidden";
-      document.body.appendChild(div);
-      
-      const computedHeight = parseInt(window.getComputedStyle(div).height) || 0;
-      document.body.removeChild(div);
-      
-      // If safe area top is 0 (no notch), fall back to a comfortable 22px for touch targets.
-      // Otherwise, match the dynamic safe-area height with an extra 4px padding so the Exit button
-      // sits comfortably clear of the notch boundary.
-      const dynamicHeight = computedHeight > 0 ? computedHeight + 4 : 22;
-      setSafeAreaTop(dynamicHeight);
+      // Use rAF to ensure measurement happens after layout/paint
+      requestAnimationFrame(() => {
+        const measured = probe ? parseFloat(window.getComputedStyle(probe).height) || 0 : 0;
+        
+        // Determine an intelligent fallback for devices where env() returns 0.
+        // This handles devices without notches, older Android phones, and PWAs.
+        let fallback = 20; // Default comfortable minimum for touch targets
+        const screenH = window.screen.height;
+        const dpr = window.devicePixelRatio || 1;
+        
+        // Taller phones (iPhone Pro Max, Samsung Ultra) have more status bar area
+        if (screenH * dpr > 2600) {
+          fallback = 28; // Very tall phones (Dynamic Island class)
+        } else if (screenH * dpr > 2000) {
+          fallback = 24; // Standard tall phones
+        } else if (screenH * dpr > 1400) {
+          fallback = 20; // Mid-range phones
+        } else {
+          fallback = 16; // Compact/older devices
+        }
+        
+        // Use hardware safe area if available, otherwise use the calculated fallback.
+        // Add a small buffer (4px) to the hardware value so the Exit button sits
+        // comfortably below the notch/Dynamic Island/punch-hole boundary.
+        const finalHeight = measured > 0 ? measured + 4 : fallback;
+        setSafeAreaTop(finalHeight);
+      });
     };
 
+    // Measure immediately
     measureSafeArea();
     
-    // Remeasure on orientation changes and window resizing
+    // Remeasure after a delay to catch post-fullscreen layout shifts
+    // (some mobile browsers adjust safe areas asynchronously after fullscreen)
+    const delayedMeasure = setTimeout(measureSafeArea, 300);
+    const delayedMeasure2 = setTimeout(measureSafeArea, 600);
+    
+    // Remeasure on orientation changes, resize, and fullscreen changes
     window.addEventListener("resize", measureSafeArea);
     window.addEventListener("orientationchange", measureSafeArea);
+    // Some browsers fire this when entering/exiting fullscreen API
+    document.addEventListener("fullscreenchange", measureSafeArea);
+    document.addEventListener("webkitfullscreenchange", measureSafeArea);
+    
     return () => {
+      clearTimeout(delayedMeasure);
+      clearTimeout(delayedMeasure2);
       window.removeEventListener("resize", measureSafeArea);
       window.removeEventListener("orientationchange", measureSafeArea);
+      document.removeEventListener("fullscreenchange", measureSafeArea);
+      document.removeEventListener("webkitfullscreenchange", measureSafeArea);
     };
   }, [isFullscreen]);
 
@@ -1181,27 +1221,30 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             )}
 
 
-            {/* Mobile Fullscreen Safe Area Top Bar */}
+            {/* Mobile Fullscreen Safe Area Top Bar — dynamic height adapts to every device */}
             {isFullscreen && isMobileDevice && (
               <div 
                 style={{
-                  paddingTop: 'env(safe-area-inset-top, 0px)',
-                  minHeight: 'calc(env(safe-area-inset-top, 0px) + 24px)'
+                  // The total bar height = device safe area (notch/status bar) + 28px for the button row.
+                  // This is set via JS-measured safeAreaTop which already includes the hardware inset + buffer.
+                  // We use paddingTop to push the button row below the notch/Dynamic Island/punch-hole.
+                  height: `${safeAreaTop + 28}px`,
+                  paddingTop: `${safeAreaTop}px`,
                 }}
-                className="w-full bg-black border-b border-white/[0.05] flex flex-col justify-end z-50 select-none flex-shrink-0"
+                className="w-full bg-black border-b border-white/[0.06] flex flex-col justify-center z-50 select-none flex-shrink-0"
               >
-                <div className="h-[24px] w-full flex items-center justify-between px-3">
+                <div className="h-[28px] w-full flex items-center justify-between px-3">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleFullscreen();
                     }}
-                    className="flex items-center gap-1.5 h-[18px] px-2.5 rounded bg-[#7c3aed] hover:bg-[#6d28d9] active:scale-95 text-white font-sans font-bold text-[8.5px] uppercase tracking-wider transition-all cursor-pointer border-none"
+                    className="flex items-center gap-1.5 h-[22px] px-3 rounded-md bg-[#7c3aed] hover:bg-[#6d28d9] active:scale-95 text-white font-sans font-bold text-[9px] uppercase tracking-wider transition-all cursor-pointer border-none shadow-sm"
                   >
-                    <LogOut className="w-2.5 h-2.5" style={{ transform: "scaleX(-1)" }} />
+                    <LogOut className="w-3 h-3" style={{ transform: "scaleX(-1)" }} />
                     <span>Exit</span>
                   </button>
-                  <span className="text-[8.5px] font-heading font-black text-white/30 uppercase tracking-widest leading-none pr-1">
+                  <span className="text-[8.5px] font-heading font-black text-white/30 uppercase tracking-widest leading-none pr-1 truncate max-w-[50%]">
                     {game.title}
                   </span>
                 </div>
