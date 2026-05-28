@@ -612,6 +612,33 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               window.addEventListener('wheel', function(e) {
                 window.parent.postMessage({ type: 'iframe-scroll', deltaY: e.deltaY }, '*');
               }, { passive: true });
+
+              // Forward vertical touch swipe movements to enable seamless page scrolling on mobile devices
+              var touchStartY = 0;
+              var touchStartX = 0;
+              window.addEventListener('touchstart', function(e) {
+                if (e.touches.length === 1) {
+                  touchStartY = e.touches[0].clientY;
+                  touchStartX = e.touches[0].clientX;
+                }
+              }, { passive: true });
+
+              window.addEventListener('touchmove', function(e) {
+                if (e.touches.length === 1) {
+                  var touchY = e.touches[0].clientY;
+                  var touchX = e.touches[0].clientX;
+                  var deltaY = touchStartY - touchY;
+                  var deltaX = touchStartX - touchX;
+                  
+                  // If the gesture is primarily vertical, forward the scroll to the parent page
+                  if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 4) {
+                    window.parent.postMessage({ type: 'iframe-scroll', deltaY: deltaY }, '*');
+                    // Update start point to allow continuous smooth scrolling
+                    touchStartY = touchY;
+                    touchStartX = touchX;
+                  }
+                }
+              }, { passive: true });
             })();
           </script>
           <style id="zylo-sandbox-canvas-fix">
