@@ -1018,6 +1018,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
            * 3px margin above/below. This allows it to sit perfectly aligned with the camera hole/notch.
            */
           .mobile-safe-area-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
             display: flex;
             align-items: center;
             justify-content: flex-start;
@@ -1131,8 +1135,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             : "relative flex flex-col bg-[#0b0b12]/80 border-2 border-white/20 shadow-[0_25px_60px_rgba(0,0,0,0.8)] rounded-2xl z-20 overflow-hidden"
             }`}
         >
-            {/* Ambient Blurred Background backdrop (shown in fullscreen or portrait mode) */}
-            {((isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait) || isFullscreen) && (
+            {/* Ambient Blurred Background backdrop (shown in fullscreen or portrait mode on PC only) */}
+            {!isMobileDevice && ((isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait) || isFullscreen) && (
               <div
                 className={`absolute inset-0 bg-cover bg-center ${game.portraitBackground ? 'blur-none opacity-100' : 'blur-[30px] opacity-40'} scale-105 pointer-events-none transition-all duration-700 z-0`}
                 style={{ backgroundImage: `url(${game.portraitBackground || game.banner || game.thumbnail})` }}
@@ -1144,9 +1148,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               </div>
             )}
 
-            {/* Transient ESC notifications inside Fullscreen container */}
+            {/* Transient ESC notifications inside Fullscreen container (PC only) */}
             <AnimatePresence>
-              {showEscToast && isFullscreen && (
+              {showEscToast && isFullscreen && !isMobileDevice && (
                 <motion.div
                   initial={{ opacity: 0, y: -50, x: "-50%" }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1177,23 +1181,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               </div>
             )}
 
-
-            {/* Mobile Fullscreen Safe Area Top Bar — CrazyGames-level dynamic safe area bar */}
-            {isFullscreen && isMobileDevice && (
-              <div className="absolute top-0 left-0 right-0 bg-black z-50 select-none mobile-safe-area-bar">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFullscreen();
-                  }}
-                  className="mobile-exit-btn"
-                >
-                  <LogOut style={{ transform: "scaleX(-1)" }} className="mobile-exit-icon" />
-                  <span>Exit</span>
-                </button>
-              </div>
-            )}
-
             {/* Dynamic Iframe Viewport Frame */}
             <div
               onClick={() => {
@@ -1206,17 +1193,12 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   }
                 }
               }}
-              style={
-                isFullscreen && isMobileDevice && isPortraitMode
-                  ? { top: '30px' }
-                  : {}
-              }
               className={`overflow-hidden z-10 ${
                 isFullscreen
                   ? isMobileDevice
                     ? isPortraitMode
-                      // Portrait game on mobile: fill the full screen vertically offset by dynamic safe-area height style
-                      ? "absolute bottom-0 left-0 right-0 w-full bg-black"
+                      // Portrait game on mobile: fill the full screen vertically
+                      ? "absolute inset-0 w-full bg-black"
                       // Landscape game on mobile: rotate 90deg to simulate landscape orientation
                       : "bg-black rotate-landscape-mobile"
                     : isPortraitMode
@@ -1227,6 +1209,21 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                     : `relative w-full max-w-5xl aspect-video mx-auto flex-shrink-0 bg-black rounded-xl shadow-2xl border border-white/10`
               }`}
             >
+              {/* Mobile Fullscreen Safe Area Top Bar inside rotated/portrait container */}
+              {isFullscreen && isMobileDevice && (
+                <div className="absolute top-0 left-0 right-0 h-[30px] bg-black z-50 select-none mobile-safe-area-bar">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFullscreen();
+                    }}
+                    className="mobile-exit-btn"
+                  >
+                    <LogOut style={{ transform: "scaleX(-1)" }} className="mobile-exit-icon" />
+                    <span>Exit</span>
+                  </button>
+                </div>
+              )}
               {/* Screen static scanner overlay */}
               <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%)] bg-[size:100%_4px] opacity-10 pointer-events-none z-10" />
 
@@ -1283,7 +1280,11 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                         : { src: getSecureIframeUrl(game.iframeUrl) }
                       )}
                       onLoad={() => setIsIframeLoaded(true)}
-                      className={`w-full h-full border-none relative z-0 ${
+                      className={`border-none ${
+                        isFullscreen && isMobileDevice
+                          ? "absolute top-[30px] left-0 w-full h-[calc(100%-30px)] z-0"
+                          : "w-full h-full relative z-0"
+                      } ${
                         !isInteracting ? "pointer-events-none" : "pointer-events-auto"
                       }`}
                       allow="autoplay; fullscreen; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
