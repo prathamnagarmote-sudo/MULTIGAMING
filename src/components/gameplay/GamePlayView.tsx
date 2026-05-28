@@ -90,39 +90,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     setIsMobileDevice(mobile);
   }, []);
 
-  // Measure the exact hardware safe-area top inset dynamically at runtime
-  const [safeAreaTop, setSafeAreaTop] = useState(24);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const measureSafeArea = () => {
-      const div = document.createElement("div");
-      div.style.position = "fixed";
-      div.style.top = "0";
-      div.style.height = "env(safe-area-inset-top, 0px)";
-      div.style.visibility = "hidden";
-      document.body.appendChild(div);
-      
-      const computedHeight = parseInt(window.getComputedStyle(div).height) || 0;
-      document.body.removeChild(div);
-      
-      // If safe area top is 0 (no notch), fall back to a comfortable 22px for touch targets.
-      // Otherwise, match the dynamic safe-area height with an extra 4px padding so the Exit button
-      // sits comfortably clear of the notch boundary.
-      const dynamicHeight = computedHeight > 0 ? computedHeight + 1 : 16;
-      setSafeAreaTop(dynamicHeight);
-    };
-
-    measureSafeArea();
-    
-    // Remeasure on orientation changes and window resizing
-    window.addEventListener("resize", measureSafeArea);
-    window.addEventListener("orientationchange", measureSafeArea);
-    return () => {
-      window.removeEventListener("resize", measureSafeArea);
-      window.removeEventListener("orientationchange", measureSafeArea);
-    };
-  }, [isFullscreen]);
+  // No JS measurement needed — we use pure CSS env(safe-area-inset-top) directly
+  // in the JSX styles below. The browser provides the exact pixel-perfect value
+  // for every device's notch/punch-hole/camera cutout dynamically.
 
   // Lock body scroll when in mobile fullscreen to prevent background page scrolling
   useEffect(() => {
@@ -1035,6 +1005,50 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             margin-left: -50vw !important;
             z-index: 9999 !important;
           }
+
+          /* Safe area bar — height is exactly the device's notch/punch-hole inset */
+          .mobile-safe-area-bar {
+            display: flex;
+            align-items: center;
+            padding-left: 6px;
+            padding-right: 6px;
+            box-sizing: border-box;
+          }
+
+          /* Exit button — fills the safe area height with small vertical padding */
+          .mobile-exit-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            /* The button height is the bar height minus 2px top/bottom breathing room */
+            height: calc(env(safe-area-inset-top, 0px) - 4px);
+            max-height: 22px;
+            padding: 0 8px;
+            border-radius: 5px;
+            background: #7c3aed;
+            color: white;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-weight: 700;
+            font-size: clamp(7px, calc(env(safe-area-inset-top, 16px) * 0.35), 11px);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            border: none;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+            flex-shrink: 0;
+          }
+          .mobile-exit-btn:active {
+            transform: scale(0.94);
+            background: #6d28d9;
+          }
+
+          /* Exit icon — proportional to the bar */
+          .mobile-exit-icon {
+            width: clamp(8px, calc(env(safe-area-inset-top, 16px) * 0.35), 13px);
+            height: clamp(8px, calc(env(safe-area-inset-top, 16px) * 0.35), 13px);
+            flex-shrink: 0;
+          }
         }
       `}</style>
 
@@ -1153,25 +1167,25 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             )}
 
 
-            {/* Mobile Fullscreen Safe Area Top Bar */}
+            {/* Mobile Fullscreen Safe Area Top Bar — uses pure CSS env() for pixel-perfect fit */}
             {isFullscreen && isMobileDevice && (
               <div 
-                style={{ height: `${safeAreaTop}px` }}
-                className="absolute top-0 left-0 right-0 bg-black border-b border-white/[0.05] flex items-center justify-between z-50 select-none px-3"
+                style={{ 
+                  height: 'env(safe-area-inset-top, 0px)',
+                  minHeight: '0px',
+                }}
+                className="absolute top-0 left-0 right-0 bg-black z-50 select-none mobile-safe-area-bar"
               >
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleFullscreen();
                   }}
-                  className="flex items-center gap-1 h-[14px] px-2 rounded bg-[#7c3aed] hover:bg-[#6d28d9] active:scale-95 text-white font-sans font-bold text-[8px] uppercase tracking-wider transition-all cursor-pointer border-none"
+                  className="mobile-exit-btn"
                 >
-                  <LogOut style={{ transform: "scaleX(-1)", width: "8.5px", height: "8.5px" }} />
+                  <LogOut style={{ transform: "scaleX(-1)" }} className="mobile-exit-icon" />
                   <span>Exit</span>
                 </button>
-                <span className="text-[7.5px] font-heading font-black text-white/30 uppercase tracking-widest leading-none pr-2 flex items-center h-full">
-                  {game.title}
-                </span>
               </div>
             )}
 
@@ -1185,7 +1199,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               }}
               style={
                 isFullscreen && isMobileDevice && isPortraitMode
-                  ? { top: `${safeAreaTop}px` }
+                  ? { top: 'env(safe-area-inset-top, 0px)' }
                   : {}
               }
               className={`overflow-hidden z-10 ${
