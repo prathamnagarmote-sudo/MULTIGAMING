@@ -114,27 +114,13 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
       requestAnimationFrame(() => {
         const measured = probe ? parseFloat(window.getComputedStyle(probe).height) || 0 : 0;
         
-        // Determine an intelligent fallback for devices where env() returns 0.
-        // This handles devices without notches, older Android phones, and PWAs.
-        let fallback = 20; // Default comfortable minimum for touch targets
-        const screenH = window.screen.height;
-        const dpr = window.devicePixelRatio || 1;
+        // Determine a minimal fallback for devices where env() returns 0.
+        // These are non-notch devices that still need a tiny status-bar clearance.
+        let fallback = 4; // Minimal clearance for non-notch devices
         
-        // Taller phones (iPhone Pro Max, Samsung Ultra) have more status bar area
-        if (screenH * dpr > 2600) {
-          fallback = 28; // Very tall phones (Dynamic Island class)
-        } else if (screenH * dpr > 2000) {
-          fallback = 24; // Standard tall phones
-        } else if (screenH * dpr > 1400) {
-          fallback = 20; // Mid-range phones
-        } else {
-          fallback = 16; // Compact/older devices
-        }
-        
-        // Use hardware safe area if available, otherwise use the calculated fallback.
-        // Add a small buffer (4px) to the hardware value so the Exit button sits
-        // comfortably below the notch/Dynamic Island/punch-hole boundary.
-        const finalHeight = measured > 0 ? measured + 4 : fallback;
+        // Use hardware safe area exactly as reported — no extra buffer.
+        // The safe area inset already accounts for the exact notch/punch-hole boundary.
+        const finalHeight = measured > 0 ? measured : fallback;
         setSafeAreaTop(finalHeight);
       });
     };
@@ -1221,30 +1207,29 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             )}
 
 
-            {/* Mobile Fullscreen Safe Area Top Bar — dynamic height adapts to every device */}
+            {/* Mobile Fullscreen Safe Area Top Bar — sits right at the notch/punch-hole line */}
             {isFullscreen && isMobileDevice && (
               <div 
                 style={{
-                  // The total bar height = device safe area (notch/status bar) + 28px for the button row.
-                  // This is set via JS-measured safeAreaTop which already includes the hardware inset + buffer.
-                  // We use paddingTop to push the button row below the notch/Dynamic Island/punch-hole.
-                  height: `${safeAreaTop + 28}px`,
+                  // paddingTop = exact hardware safe area (notch/punch-hole height).
+                  // The button row (18px) sits immediately below it — flush with the notch edge.
+                  height: `${safeAreaTop + 18}px`,
                   paddingTop: `${safeAreaTop}px`,
                 }}
                 className="w-full bg-black border-b border-white/[0.06] flex flex-col justify-center z-50 select-none flex-shrink-0"
               >
-                <div className="h-[28px] w-full flex items-center justify-between px-3">
+                <div className="h-[18px] w-full flex items-center justify-between px-3">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleFullscreen();
                     }}
-                    className="flex items-center gap-1.5 h-[22px] px-3 rounded-md bg-[#7c3aed] hover:bg-[#6d28d9] active:scale-95 text-white font-sans font-bold text-[9px] uppercase tracking-wider transition-all cursor-pointer border-none shadow-sm"
+                    className="flex items-center gap-1 h-[16px] px-2 rounded bg-[#7c3aed] hover:bg-[#6d28d9] active:scale-95 text-white font-sans font-bold text-[8px] uppercase tracking-wider transition-all cursor-pointer border-none"
                   >
-                    <LogOut className="w-3 h-3" style={{ transform: "scaleX(-1)" }} />
+                    <LogOut className="w-2.5 h-2.5" style={{ transform: "scaleX(-1)" }} />
                     <span>Exit</span>
                   </button>
-                  <span className="text-[8.5px] font-heading font-black text-white/30 uppercase tracking-widest leading-none pr-1 truncate max-w-[50%]">
+                  <span className="text-[7.5px] font-heading font-black text-white/25 uppercase tracking-widest leading-none pr-1 truncate max-w-[50%]">
                     {game.title}
                   </span>
                 </div>
