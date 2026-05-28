@@ -610,7 +610,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               if (!document.querySelector('meta[name="viewport"]')) {
                 var meta = document.createElement('meta');
                 meta.name = 'viewport';
-                meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no';
+                meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover';
                 (document.head || document.documentElement).appendChild(meta);
               }
 
@@ -1121,18 +1121,18 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
             {/* Mobile Fullscreen Safe Area Top Bar */}
             {isFullscreen && isMobileDevice && (
-              <div className="absolute top-0 left-0 right-0 h-[16px] bg-black border-b border-white/[0.05] flex items-center justify-between z-50 select-none">
+              <div className="absolute top-0 left-0 right-0 h-[12px] bg-black border-b border-white/[0.05] flex items-center justify-between z-50 select-none">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleFullscreen();
                   }}
-                  className="flex items-center gap-1 h-full px-2.5 rounded-r bg-[#7c3aed] hover:bg-[#6d28d9] active:scale-95 text-white font-sans font-bold text-[8.5px] uppercase tracking-wider transition-all cursor-pointer border-none"
+                  className="flex items-center gap-0.5 h-full px-2 rounded-r bg-[#7c3aed] hover:bg-[#6d28d9] active:scale-95 text-white font-sans font-bold text-[7px] uppercase tracking-wider transition-all cursor-pointer border-none"
                 >
-                  <LogOut className="w-2.5 h-2.5" style={{ transform: "scaleX(-1)" }} />
+                  <LogOut className="w-2 h-2" style={{ transform: "scaleX(-1)" }} />
                   <span>Exit</span>
                 </button>
-                <span className="text-[7.5px] font-heading font-black text-white/30 uppercase tracking-widest leading-none pr-3 flex items-center h-full">
+                <span className="text-[6.5px] font-heading font-black text-white/30 uppercase tracking-widest leading-none pr-3 flex items-center h-full">
                   {game.title}
                 </span>
               </div>
@@ -1151,7 +1151,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   ? isMobileDevice
                     ? isPortraitMode
                       // Portrait game on mobile: fill the full screen vertically offset by top bar
-                      ? "absolute top-[16px] bottom-0 left-0 right-0 w-full bg-black"
+                      ? "absolute top-[12px] bottom-0 left-0 right-0 w-full bg-black"
                       // Landscape game on mobile: rotate 90deg to simulate landscape orientation
                       : "bg-black rotate-landscape-mobile"
                     : isPortraitMode
