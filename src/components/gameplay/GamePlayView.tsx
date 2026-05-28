@@ -90,6 +90,40 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     setIsMobileDevice(mobile);
   }, []);
 
+  // Measure the exact hardware safe-area top inset dynamically at runtime
+  const [safeAreaTop, setSafeAreaTop] = useState(24);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const measureSafeArea = () => {
+      const div = document.createElement("div");
+      div.style.position = "fixed";
+      div.style.top = "0";
+      div.style.height = "env(safe-area-inset-top, 0px)";
+      div.style.visibility = "hidden";
+      document.body.appendChild(div);
+      
+      const computedHeight = parseInt(window.getComputedStyle(div).height) || 0;
+      document.body.removeChild(div);
+      
+      // If safe area top is 0 (no notch), fall back to a comfortable 22px for touch targets.
+      // Otherwise, match the dynamic safe-area height with an extra 4px padding so the Exit button
+      // sits comfortably clear of the notch boundary.
+      const dynamicHeight = computedHeight > 0 ? computedHeight + 4 : 22;
+      setSafeAreaTop(dynamicHeight);
+    };
+
+    measureSafeArea();
+    
+    // Remeasure on orientation changes and window resizing
+    window.addEventListener("resize", measureSafeArea);
+    window.addEventListener("orientationchange", measureSafeArea);
+    return () => {
+      window.removeEventListener("resize", measureSafeArea);
+      window.removeEventListener("orientationchange", measureSafeArea);
+    };
+  }, [isFullscreen]);
+
   // Lock body scroll when in mobile fullscreen to prevent background page scrolling
   useEffect(() => {
     if (isMobileDevice && isFullscreen) {
@@ -1122,20 +1156,20 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             {/* Mobile Fullscreen Safe Area Top Bar */}
             {isFullscreen && isMobileDevice && (
               <div 
-                style={{ height: 'max(env(safe-area-inset-top), 20px)' }}
-                className="absolute top-0 left-0 right-0 bg-black border-b border-white/[0.05] flex items-center justify-between z-50 select-none px-2"
+                style={{ height: `${safeAreaTop}px` }}
+                className="absolute top-0 left-0 right-0 bg-black border-b border-white/[0.05] flex items-center justify-between z-50 select-none px-3"
               >
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleFullscreen();
                   }}
-                  className="flex items-center gap-1 h-[18px] px-2 rounded bg-[#7c3aed] hover:bg-[#6d28d9] active:scale-95 text-white font-sans font-bold text-[8px] uppercase tracking-wider transition-all cursor-pointer border-none"
+                  className="flex items-center gap-1.5 h-[18px] px-2.5 rounded-md bg-[#7c3aed] hover:bg-[#6d28d9] active:scale-95 text-white font-sans font-bold text-[8.5px] uppercase tracking-wider transition-all cursor-pointer border-none"
                 >
                   <LogOut className="w-2.5 h-2.5" style={{ transform: "scaleX(-1)" }} />
                   <span>Exit</span>
                 </button>
-                <span className="text-[8px] font-heading font-black text-white/30 uppercase tracking-widest leading-none pr-2">
+                <span className="text-[8.5px] font-heading font-black text-white/30 uppercase tracking-widest leading-none pr-3 flex items-center h-full">
                   {game.title}
                 </span>
               </div>
@@ -1151,7 +1185,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               }}
               style={
                 isFullscreen && isMobileDevice && isPortraitMode
-                  ? { top: 'max(env(safe-area-inset-top), 20px)' }
+                  ? { top: `${safeAreaTop}px` }
                   : {}
               }
               className={`overflow-hidden z-10 ${
