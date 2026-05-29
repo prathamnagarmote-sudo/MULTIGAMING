@@ -78,7 +78,12 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     document.body.appendChild(helper);
 
     const handleResize = () => {
-      setIsDevicePortrait(window.innerWidth < window.innerHeight);
+      const orientationObj = (window.screen as any)?.orientation;
+      const isLandscapeType = (orientationObj?.type && typeof orientationObj.type === "string" && orientationObj.type.includes("landscape")) ||
+                              window.orientation === 90 ||
+                              window.orientation === -90;
+      
+      setIsDevicePortrait(!isLandscapeType);
 
       const style = window.getComputedStyle(helper);
       const leftVal = parseFloat(style.left) || 0;
@@ -1204,13 +1209,14 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           /* Vertical text for the exit button inside the narrow 30px bar */
           .mobile-exit-text-landscape {
             display: inline-block;
-            writing-mode: vertical-rl;
-            transform: rotate(180deg);
+            transform: rotate(-90deg);
+            transform-origin: center;
             font-family: system-ui, -apple-system, sans-serif;
             font-weight: 800;
             font-size: 8.5px;
             letter-spacing: 0.02em;
             line-height: 1;
+            white-space: nowrap;
           }
 
           /* Exit icons */
@@ -1463,6 +1469,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                         : { src: getSecureIframeUrl(game.iframeUrl) }
                       )}
                       onLoad={() => setIsIframeLoaded(true)}
+                      width="100%"
+                      height="100%"
                       className={`border-none ${
                         isFullscreen && isMobileDevice
                           ? isPortraitMode
