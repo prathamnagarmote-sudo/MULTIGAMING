@@ -1047,8 +1047,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                translateX(100vw) shifts it right so it maps onto the screen perfectly. */
             transform: translateX(100vw) rotate(90deg) !important;
             z-index: 99999 !important;
-            display: flex !important;
-            flex-direction: column !important;
             background: #000 !important;
           }
 
@@ -1080,26 +1078,31 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
            * Height is fixed 30px since the notch is now on the side, not above.
            */
           .mobile-safe-area-bar-landscape {
-            position: relative;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
             display: flex;
             align-items: center;
             justify-content: flex-start;
             box-sizing: border-box;
-            width: 100%;
             height: 30px;
             padding-top: 0;
             padding-left: max(env(safe-area-inset-left, 0px), env(safe-area-inset-top, 0px), 12px);
             padding-right: max(env(safe-area-inset-right, 0px), 12px);
             background: #000000;
             z-index: 9999;
-            flex-shrink: 0;
           }
 
           /* Landscape iframe: fill all remaining space after safe area bar */
           .landscape-game-iframe {
-            flex: 1 1 0% !important;
+            position: absolute !important;
+            top: 30px !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
             width: 100% !important;
-            min-height: 0 !important;
+            height: calc(100% - 30px) !important;
           }
 
           /* Exit button — optimized size, premium gradient style matching CrazyGames level */
@@ -1302,7 +1305,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
               {/* Mobile Fullscreen Safe Area Top Bar (Landscape Games) */}
               {isFullscreen && isMobileDevice && !isPortraitMode && (
-                <div className="w-full bg-black z-50 select-none mobile-safe-area-bar-landscape relative shrink-0">
+                <div className="absolute top-0 left-0 right-0 h-[30px] bg-black z-50 select-none mobile-safe-area-bar-landscape">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
