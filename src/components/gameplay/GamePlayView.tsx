@@ -62,19 +62,32 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const [hasStarted, setHasStarted] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
   const [isDevicePortrait, setIsDevicePortrait] = useState(true);
+  const [orientationAngle, setOrientationAngle] = useState(0);
 
-  // Dynamically monitor screen dimensions to support native rotations
+  // Dynamically monitor screen dimensions and orientation angle to support native rotations
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handleResize = () => {
       setIsDevicePortrait(window.innerWidth < window.innerHeight);
+      // Track orientation angle (0=portrait, 90=landscape-primary, 270=landscape-secondary)
+      const angle = (screen as any)?.orientation?.angle ?? (window as any).orientation ?? 0;
+      setOrientationAngle(typeof angle === 'number' ? angle : 0);
+    };
+    // Also listen for orientation API changes for precise angle detection
+    const handleOrientationChange = () => {
+      const angle = (screen as any)?.orientation?.angle ?? (window as any).orientation ?? 0;
+      setOrientationAngle(typeof angle === 'number' ? angle : 0);
+      // Small delay to let the browser settle dimensions
+      setTimeout(() => setIsDevicePortrait(window.innerWidth < window.innerHeight), 100);
     };
     window.addEventListener("resize", handleResize);
-    window.addEventListener("orientationchange", handleResize);
+    window.addEventListener("orientationchange", handleOrientationChange);
+    (screen as any)?.orientation?.addEventListener?.("change", handleOrientationChange);
     handleResize();
     return () => {
       window.removeEventListener("resize", handleResize);
-      window.removeEventListener("orientationchange", handleResize);
+      window.removeEventListener("orientationchange", handleOrientationChange);
+      (screen as any)?.orientation?.removeEventListener?.("change", handleOrientationChange);
     };
   }, []);
 
@@ -1032,8 +1045,18 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           /*
            * Landscape game on portrait-held mobile:
            * Uses position:fixed + transform-origin:top left + rotate(90deg)
-           * The left offset = 100vw pushes the element right so after 90deg rotation
-           * the top-left corner lands at viewport top-left. This avoids all cropping.
+           * translateX(100vw) pushes the element right so after rotation the
+           * container maps exactly onto the viewport — no cropping.
+           *
+           * CRITICAL: flex-direction is ROW, not column!
+           * After 90deg CW rotation around top-left:
+           *   - Original LEFT side → Physical TOP of screen
+           *   - Original RIGHT side → Physical BOTTOM
+           *   - Original TOP → Physical RIGHT
+           *   - Original BOTTOM → Physical LEFT
+           *
+           * So the first row child (safe area strip on original LEFT)
+           * appears as a horizontal bar at the physical TOP of the landscape view.
            */
           .rotate-landscape-mobile {
             position: fixed !important;
@@ -1041,20 +1064,17 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             left: 0 !important;
             width: 100dvh !important;
             height: 100dvw !important;
-            transform: rotate(90deg) !important;
-            transform-origin: top left !important;
-            /* After 90deg rotation around top-left, the element moves up by its width.
-               translateX(100vw) shifts it right so it maps onto the screen perfectly. */
             transform: translateX(100vw) rotate(90deg) !important;
+            transform-origin: top left !important;
             z-index: 99999 !important;
             display: flex !important;
-            flex-direction: column !important;
+            flex-direction: row !important;
             background: #000 !important;
           }
 
           /*
            * CrazyGames-style safe area bar for PORTRAIT fullscreen:
-           * 30px bar height + device notch safe inset at top.
+           * 30px bar height + device notch safe inset at top. (UNCHANGED)
            */
           .mobile-safe-area-bar {
             position: relative;
@@ -1073,29 +1093,74 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           }
 
           /*
-           * Landscape-specific safe area bar:
-           * When the game is rotated 90deg, the physical "top" of the phone becomes the "left" side.
-           * So we use left/right safe-area insets for padding.
-           * Height is fixed 30px since the notch is now on the side, not above.
+           * Landscape-rotated safe area strip (CSS rotation active):
+           * This is a VERTICAL strip on the original LEFT side of the container.
+           * After 90deg CW rotation, original-left becomes physical-TOP,
+           * so this strip appears as a horizontal bar across the top of the landscape view.
+           *
+           * - Strip width (30px) becomes the physical bar HEIGHT (30px)
+           * - Strip height (100%) becomes the physical bar WIDTH (full screen width)
+           * - flex-direction: column stacks items along original Y-axis
+           *   → After rotation: original Y=0 maps to physical RIGHT edge,
+           *     original Y=max maps to physical LEFT edge
+           */
+          .mobile-safe-area-strip-landscape {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+            width: 30px;
+            height: 100%;
+            padding: 3px;
+            background: #000000;
+            z-index: 9999;
+            flex-shrink: 0;
+          }
+          /* Default: exit button at original Y=0 → physical top-RIGHT */
+          .mobile-safe-area-strip-landscape.exit-right {
+            justify-content: flex-start;
+          }
+          /* Flipped: exit button at original Y=max → physical top-LEFT */
+          .mobile-safe-area-strip-landscape.exit-left {
+            justify-content: flex-end;
+          }
+
+          /*
+           * Landscape safe area bar for NATIVE landscape (phone physically rotated):
+           * Normal horizontal bar at top, just like portrait but without notch-top padding.
            */
           .mobile-safe-area-bar-landscape {
             position: relative;
             display: flex;
             align-items: center;
-            justify-content: flex-start;
             box-sizing: border-box;
             width: 100%;
             height: 30px;
             padding-top: 0;
-            padding-left: max(env(safe-area-inset-left, 0px), env(safe-area-inset-top, 0px), 12px);
+            padding-left: max(env(safe-area-inset-left, 0px), 12px);
             padding-right: max(env(safe-area-inset-right, 0px), 12px);
             background: #000000;
             z-index: 9999;
             flex-shrink: 0;
           }
+          /* Native landscape: exit button alignment based on rotation direction */
+          .mobile-safe-area-bar-landscape.exit-right {
+            justify-content: flex-end;
+          }
+          .mobile-safe-area-bar-landscape.exit-left {
+            justify-content: flex-start;
+          }
 
-          /* Landscape iframe: fill all remaining space after safe area bar */
+          /* Landscape iframe (CSS rotated): fill all remaining space in the row */
           .landscape-game-iframe {
+            flex: 1 1 0% !important;
+            height: 100% !important;
+            min-width: 0 !important;
+          }
+
+          /* Landscape iframe (native): fill all remaining space in the column */
+          .landscape-game-iframe-native {
             flex: 1 1 0% !important;
             width: 100% !important;
             min-height: 0 !important;
@@ -1283,10 +1348,16 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                       : `relative w-full max-w-5xl aspect-video mx-auto flex-shrink-0 bg-black rounded-xl shadow-2xl border border-white/10 flex flex-col`
               }`}
             >
-              {/* Mobile Fullscreen Safe Area Top Bar — works for both portrait and landscape games */}
+              {/* Mobile Fullscreen Safe Area — portrait: horizontal top bar, landscape: adapts to rotation */}
               {isFullscreen && isMobileDevice && (
-                <div className={`w-full bg-black z-50 select-none relative shrink-0 ${
-                  isPortraitMode ? "mobile-safe-area-bar" : "mobile-safe-area-bar-landscape"
+                <div className={`bg-black z-50 select-none relative shrink-0 ${
+                  isPortraitMode
+                    ? "mobile-safe-area-bar w-full"
+                    : isDevicePortrait
+                      // CSS-rotated landscape: vertical strip (becomes horizontal top bar after rotation)
+                      ? `mobile-safe-area-strip-landscape ${orientationAngle === 270 || orientationAngle === -90 ? 'exit-left' : 'exit-right'}`
+                      // Native landscape: horizontal top bar with dynamic alignment
+                      : `mobile-safe-area-bar-landscape w-full ${orientationAngle === 270 || orientationAngle === -90 ? 'exit-left' : 'exit-right'}`
                 }`}>
                   <button
                     onClick={(e) => {
@@ -1356,8 +1427,12 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                         : { src: getSecureIframeUrl(game.iframeUrl) }
                       )}
                       onLoad={() => setIsIframeLoaded(true)}
-                      className={`border-none w-full relative z-0 ${
-                        isFullscreen && isMobileDevice && !isPortraitMode ? "landscape-game-iframe" : "flex-1"
+                      className={`border-none relative z-0 ${
+                        isFullscreen && isMobileDevice && !isPortraitMode
+                          ? isDevicePortrait
+                            ? "landscape-game-iframe"          // CSS-rotated: flex row, fill remaining width
+                            : "landscape-game-iframe-native w-full"  // Native landscape: flex column, fill remaining height
+                          : "flex-1 w-full"                    // Portrait / desktop: flex column, fill height
                       } ${
                         !isInteracting ? "pointer-events-none" : "pointer-events-auto"
                       }`}
