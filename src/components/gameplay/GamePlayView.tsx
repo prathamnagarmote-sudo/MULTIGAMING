@@ -1047,16 +1047,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
            * Uses position:fixed + transform-origin:top left + rotate(90deg)
            * translateX(100vw) pushes the element right so after rotation the
            * container maps exactly onto the viewport — no cropping.
-           *
-           * CRITICAL: flex-direction is ROW, not column!
-           * After 90deg CW rotation around top-left:
-           *   - Original LEFT side → Physical TOP of screen
-           *   - Original RIGHT side → Physical BOTTOM
-           *   - Original TOP → Physical RIGHT
-           *   - Original BOTTOM → Physical LEFT
-           *
-           * So the first row child (safe area strip on original LEFT)
-           * appears as a horizontal bar at the physical TOP of the landscape view.
+           * flex-direction: row so the LEFT-side spacer becomes the physical TOP bar.
            */
           .rotate-landscape-mobile {
             position: fixed !important;
@@ -1093,80 +1084,61 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           }
 
           /*
-           * Landscape-rotated safe area strip (CSS rotation active):
-           * This is a VERTICAL strip on the original LEFT side of the container.
-           * After 90deg CW rotation, original-left becomes physical-TOP,
-           * so this strip appears as a horizontal bar across the top of the landscape view.
-           *
-           * - Strip width (30px) becomes the physical bar HEIGHT (30px)
-           * - Strip height (100%) becomes the physical bar WIDTH (full screen width)
-           * - flex-direction: column stacks items along original Y-axis
-           *   → After rotation: original Y=0 maps to physical RIGHT edge,
-           *     original Y=max maps to physical LEFT edge
-           */
-          .mobile-safe-area-strip-landscape {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            box-sizing: border-box;
-            width: 30px;
-            height: 100%;
-            padding: 3px;
-            background: #000000;
-            z-index: 9999;
-            flex-shrink: 0;
-          }
-          /* Default: exit button at original Y=0 → physical top-RIGHT */
-          .mobile-safe-area-strip-landscape.exit-right {
-            justify-content: flex-start;
-          }
-          /* Flipped: exit button at original Y=max → physical top-LEFT */
-          .mobile-safe-area-strip-landscape.exit-left {
-            justify-content: flex-end;
-          }
-
-          /*
-           * Landscape safe area bar for NATIVE landscape (phone physically rotated):
-           * Normal horizontal bar at top, just like portrait but without notch-top padding.
+           * Landscape safe area bar (CSS-rotated):
+           * A vertical strip on the original LEFT side of the rotated container.
+           * After 90deg CW rotation, original-left becomes physical-TOP.
+           * Exit button is rendered INSIDE this bar.
            */
           .mobile-safe-area-bar-landscape {
             position: relative;
             display: flex;
+            flex-direction: column;
             align-items: center;
+            justify-content: flex-start;
             box-sizing: border-box;
-            width: 100%;
-            height: 30px;
-            padding-top: 0;
-            padding-left: max(env(safe-area-inset-left, 0px), 12px);
-            padding-right: max(env(safe-area-inset-right, 0px), 12px);
+            width: calc(38px + env(safe-area-inset-top, 0px));
+            height: 100%;
+            padding-left: env(safe-area-inset-top, 0px);
+            padding-top: 8px;
             background: #000000;
             z-index: 9999;
             flex-shrink: 0;
           }
-          /* Native landscape: exit button alignment based on rotation direction */
-          .mobile-safe-area-bar-landscape.exit-right {
+
+          /*
+           * Landscape safe area bar for NATIVE landscape (phone physically rotated):
+           * Horizontal bar at top. Exit button is rendered INSIDE this bar.
+           */
+          .mobile-safe-area-bar-landscape-native {
+            position: relative;
+            display: flex;
+            align-items: center;
             justify-content: flex-end;
-          }
-          .mobile-safe-area-bar-landscape.exit-left {
-            justify-content: flex-start;
+            box-sizing: border-box;
+            width: 100%;
+            height: 38px;
+            padding-right: max(env(safe-area-inset-right, 0px), 8px);
+            padding-left: max(env(safe-area-inset-left, 0px), 8px);
+            background: #000000;
+            z-index: 9999;
+            flex-shrink: 0;
           }
 
-          /* Landscape iframe (CSS rotated): fill all remaining space in the row */
+          /* Landscape iframe (CSS rotated): fill remaining space in the row */
           .landscape-game-iframe {
             flex: 1 1 0% !important;
             height: 100% !important;
             min-width: 0 !important;
           }
 
-          /* Landscape iframe (native): fill all remaining space in the column */
+          /* Landscape iframe (native): fill remaining space in the column */
           .landscape-game-iframe-native {
             flex: 1 1 0% !important;
             width: 100% !important;
             min-height: 0 !important;
           }
 
-          /* Exit button — optimized size, premium gradient style matching CrazyGames level */
+          /* Exit button — portrait games (horizontal layout inside safe area bar) */
           .mobile-exit-btn {
             display: inline-flex;
             align-items: center;
@@ -1192,8 +1164,45 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             background: #6d28d9;
           }
 
-          /* Exit icon */
+          /* Exit icon — portrait */
           .mobile-exit-icon {
+            width: 12px;
+            height: 12px;
+            flex-shrink: 0;
+          }
+
+          /*
+           * Vertical Exit Button for Landscape Games:
+           * Beautiful, compact, vertical layout (icon on top, text below)
+           * designed to fit perfectly inside the black safe area bar at the top-right.
+           */
+          .mobile-exit-btn-landscape {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
+            width: 32px;
+            height: 30px;
+            border-radius: 5px;
+            background: #7c3aed;
+            color: white;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-weight: 700;
+            font-size: 8px;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
+          }
+          .mobile-exit-btn-landscape:active {
+            transform: scale(0.92);
+            background: #6d28d9;
+          }
+          .mobile-exit-icon-landscape {
             width: 12px;
             height: 12px;
             flex-shrink: 0;
@@ -1348,17 +1357,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                       : `relative w-full max-w-5xl aspect-video mx-auto flex-shrink-0 bg-black rounded-xl shadow-2xl border border-white/10 flex flex-col`
               }`}
             >
-              {/* Mobile Fullscreen Safe Area — portrait: horizontal top bar, landscape: adapts to rotation */}
-              {isFullscreen && isMobileDevice && (
-                <div className={`bg-black z-50 select-none relative shrink-0 ${
-                  isPortraitMode
-                    ? "mobile-safe-area-bar w-full"
-                    : isDevicePortrait
-                      // CSS-rotated landscape: vertical strip (becomes horizontal top bar after rotation)
-                      ? `mobile-safe-area-strip-landscape ${orientationAngle === 270 || orientationAngle === -90 ? 'exit-left' : 'exit-right'}`
-                      // Native landscape: horizontal top bar with dynamic alignment
-                      : `mobile-safe-area-bar-landscape w-full ${orientationAngle === 270 || orientationAngle === -90 ? 'exit-left' : 'exit-right'}`
-                }`}>
+              {/* Mobile Fullscreen Safe Area — portrait: top bar with exit button, landscape: pure spacer */}
+              {isFullscreen && isMobileDevice && isPortraitMode && (
+                <div className="mobile-safe-area-bar w-full bg-black z-50 select-none relative shrink-0">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1367,6 +1368,21 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                     className="mobile-exit-btn"
                   >
                     <LogOut style={{ transform: "scaleX(-1)" }} className="mobile-exit-icon" />
+                    <span>Exit</span>
+                  </button>
+                </div>
+              )}
+              {/* Landscape safe area bar with vertical exit button inside */}
+              {isFullscreen && isMobileDevice && !isPortraitMode && (
+                <div className={isDevicePortrait ? "mobile-safe-area-bar-landscape" : "mobile-safe-area-bar-landscape-native"}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleExitFullscreen();
+                    }}
+                    className="mobile-exit-btn-landscape"
+                  >
+                    <LogOut style={{ transform: "scaleX(-1)" }} className="mobile-exit-icon-landscape" />
                     <span>Exit</span>
                   </button>
                 </div>
@@ -1546,7 +1562,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 </div>
               )}
             </div>
-
 
 
             {/* Mobile Fullscreen Floating Button — always visible on touch devices */}
