@@ -1134,8 +1134,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             display: inline-flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            gap: 4px;
+            justify-content: space-between;
+            padding: 6px 0;
             width: 22px;
             height: 56px;
             border-radius: 4px;
@@ -1155,14 +1155,14 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
           /* Vertical text for the exit button inside the narrow 30px bar */
           .mobile-exit-text-landscape {
+            display: inline-block;
             writing-mode: vertical-rl;
-            text-orientation: upright;
+            transform: rotate(180deg);
             font-family: system-ui, -apple-system, sans-serif;
             font-weight: 800;
-            font-size: 7.5px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-top: 1px;
+            font-size: 8.5px;
+            letter-spacing: 0.02em;
+            line-height: 1;
           }
 
           /* Exit icons */
@@ -1352,8 +1352,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                     }}
                     className="mobile-exit-btn-landscape"
                   >
-                    <LogOut style={{ transform: "scaleX(-1)" }} className="mobile-exit-icon-landscape" />
                     <span className="mobile-exit-text-landscape">Exit</span>
+                    <LogOut style={{ transform: "scaleX(-1)" }} className="mobile-exit-icon-landscape" />
                   </button>
                 </div>
               )}
