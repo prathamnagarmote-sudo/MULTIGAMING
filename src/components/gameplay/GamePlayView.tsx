@@ -62,19 +62,54 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const [hasStarted, setHasStarted] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
   const [isDevicePortrait, setIsDevicePortrait] = useState(true);
+  const [notchSide, setNotchSide] = useState<"left" | "right">("left");
 
-  // Dynamically monitor screen dimensions to support native rotations
+  // Dynamically monitor screen dimensions and safe areas to support native rotations & notches
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    // Create helper element to read safe-area insets in JS
+    const helper = document.createElement("div");
+    helper.style.position = "fixed";
+    helper.style.left = "env(safe-area-inset-left)";
+    helper.style.right = "env(safe-area-inset-right)";
+    helper.style.visibility = "hidden";
+    helper.style.pointerEvents = "none";
+    document.body.appendChild(helper);
+
     const handleResize = () => {
       setIsDevicePortrait(window.innerWidth < window.innerHeight);
+
+      const style = window.getComputedStyle(helper);
+      const leftVal = parseFloat(style.left) || 0;
+      const rightVal = parseFloat(style.right) || 0;
+
+      if (rightVal > 0 && rightVal > leftVal) {
+        setNotchSide("right");
+      } else {
+        setNotchSide("left");
+      }
     };
+
     window.addEventListener("resize", handleResize);
     window.addEventListener("orientationchange", handleResize);
+    
+    const orientationObj = (window.screen as any)?.orientation;
+    if (orientationObj) {
+      orientationObj.addEventListener("change", handleResize);
+    }
+    
     handleResize();
+
     return () => {
+      if (helper.parentNode) {
+        helper.parentNode.removeChild(helper);
+      }
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
+      if (orientationObj) {
+        orientationObj.removeEventListener("change", handleResize);
+      }
     };
   }, []);
 
@@ -1091,6 +1126,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             background: #000000 !important;
             z-index: 9999 !important;
           }
+          .mobile-safe-area-bar-landscape-right {
+            left: auto !important;
+            right: 0 !important;
+          }
 
           /* Landscape iframe: absolutely positioned to the right of the safe area bar */
           .landscape-game-iframe {
@@ -1099,6 +1138,15 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             bottom: 0 !important;
             left: 30px !important;
             right: 0 !important;
+            width: calc(100% - 30px) !important;
+            height: 100% !important;
+          }
+          .landscape-game-iframe-right {
+            position: absolute !important;
+            top: 0 !important;
+            bottom: 0 !important;
+            right: 30px !important;
+            left: 0 !important;
             width: calc(100% - 30px) !important;
             height: 100% !important;
           }
@@ -1344,7 +1392,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
               {/* Mobile Fullscreen Safe Area Top Bar (Landscape Games) */}
               {isFullscreen && isMobileDevice && !isPortraitMode && (
-                <div className="mobile-safe-area-bar-landscape select-none">
+                <div className={`mobile-safe-area-bar-landscape select-none ${
+                  notchSide === "right" ? "mobile-safe-area-bar-landscape-right" : ""
+                }`}>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1417,7 +1467,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                         isFullscreen && isMobileDevice
                           ? isPortraitMode
                             ? "absolute top-[30px] left-0 w-full h-[calc(100%-30px)] z-0"
-                            : "landscape-game-iframe"
+                            : notchSide === "right"
+                              ? "landscape-game-iframe-right"
+                              : "landscape-game-iframe"
                           : "w-full h-full relative z-0"
                       } ${
                         !isInteracting ? "pointer-events-none" : "pointer-events-auto"
