@@ -1029,24 +1029,32 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     <div className="relative w-full text-white pb-16">
       <style>{`
         @media (max-width: 767px) {
+          /*
+           * Landscape game on portrait-held mobile:
+           * Uses position:fixed + transform-origin:top left + rotate(90deg)
+           * The left offset = 100vw pushes the element right so after 90deg rotation
+           * the top-left corner lands at viewport top-left. This avoids all cropping.
+           */
           .rotate-landscape-mobile {
-            transform: rotate(90deg) !important;
-            transform-origin: center !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
             width: 100dvh !important;
             height: 100dvw !important;
-            position: absolute !important;
-            top: 50% !important;
-            left: 50% !important;
-            margin-top: -50dvh !important;
-            margin-left: -50dvw !important;
-            z-index: 9999 !important;
+            transform: rotate(90deg) !important;
+            transform-origin: top left !important;
+            /* After 90deg rotation around top-left, the element moves up by its width.
+               translateX(100vw) shifts it right so it maps onto the screen perfectly. */
+            transform: translateX(100vw) rotate(90deg) !important;
+            z-index: 99999 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            background: #000 !important;
           }
 
           /*
-           * CrazyGames-style safe area bar:
-           * The bar height perfectly adapts to the exit button: exactly 30px high.
-           * The Exit button is vertically centered inside this compact space, leaving exactly
-           * 3px margin above/below. This allows it to sit perfectly aligned with the camera hole/notch.
+           * CrazyGames-style safe area bar for PORTRAIT fullscreen:
+           * 30px bar height + device notch safe inset at top.
            */
           .mobile-safe-area-bar {
             position: relative;
@@ -1061,6 +1069,36 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             padding-right: max(env(safe-area-inset-right, 0px), 12px);
             background: #000000;
             z-index: 9999;
+            flex-shrink: 0;
+          }
+
+          /*
+           * Landscape-specific safe area bar:
+           * When the game is rotated 90deg, the physical "top" of the phone becomes the "left" side.
+           * So we use left/right safe-area insets for padding.
+           * Height is fixed 30px since the notch is now on the side, not above.
+           */
+          .mobile-safe-area-bar-landscape {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            box-sizing: border-box;
+            width: 100%;
+            height: 30px;
+            padding-top: 0;
+            padding-left: max(env(safe-area-inset-left, 0px), env(safe-area-inset-top, 0px), 12px);
+            padding-right: max(env(safe-area-inset-right, 0px), 12px);
+            background: #000000;
+            z-index: 9999;
+            flex-shrink: 0;
+          }
+
+          /* Landscape iframe: fill all remaining space after safe area bar */
+          .landscape-game-iframe {
+            flex: 1 1 0% !important;
+            width: 100% !important;
+            min-height: 0 !important;
           }
 
           /* Exit button — optimized size, premium gradient style matching CrazyGames level */
@@ -1225,31 +1263,35 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   }
                 }
               }}
-              className={`overflow-hidden z-10 flex flex-col ${
+              className={`overflow-hidden z-10 ${
                 isFullscreen
                   ? isMobileDevice
                     ? isPortraitMode
-                      // Portrait game on mobile: fill the full screen vertically
-                      ? "absolute inset-0 w-full bg-black"
+                      // Portrait game on mobile: fill the full screen vertically, flex column for safe area + iframe
+                      ? "absolute inset-0 w-full bg-black flex flex-col"
                       // Landscape game on mobile: rotate 90deg only if the device is physically held in portrait mode
-                      : `bg-black ${isDevicePortrait ? "rotate-landscape-mobile" : "absolute inset-0 w-full h-full"}`
+                      : isDevicePortrait
+                        ? "rotate-landscape-mobile bg-black" // CSS class handles fixed positioning, rotation, and flex column
+                        : "absolute inset-0 w-full h-full bg-black flex flex-col" // Device already landscape, no rotation needed
                     : isPortraitMode
-                      ? "absolute inset-0 h-full w-auto aspect-[9/16] mx-auto flex-shrink-0 bg-black"
-                      : "absolute inset-0 w-full h-full flex-shrink-0 bg-black"
+                      ? "absolute inset-0 h-full w-auto aspect-[9/16] mx-auto flex-shrink-0 bg-black flex flex-col"
+                      : "absolute inset-0 w-full h-full flex-shrink-0 bg-black flex flex-col"
                   : !hasStarted && isMobileDevice
                     ? "relative w-full flex flex-col bg-transparent" // Mobile pre-start view: natural vertical layout, no aspect lock!
                     : isPortraitMode
-                      ? `relative h-[68vh] md:h-[72vh] w-auto max-w-full ${aspectClass} mx-auto flex-shrink-0 bg-transparent`
-                      : `relative w-full max-w-5xl aspect-video mx-auto flex-shrink-0 bg-black rounded-xl shadow-2xl border border-white/10`
+                      ? `relative h-[68vh] md:h-[72vh] w-auto max-w-full ${aspectClass} mx-auto flex-shrink-0 bg-transparent flex flex-col`
+                      : `relative w-full max-w-5xl aspect-video mx-auto flex-shrink-0 bg-black rounded-xl shadow-2xl border border-white/10 flex flex-col`
               }`}
             >
-              {/* Mobile Fullscreen Safe Area Top Bar inside rotated/portrait container */}
+              {/* Mobile Fullscreen Safe Area Top Bar — works for both portrait and landscape games */}
               {isFullscreen && isMobileDevice && (
-                <div className="w-full bg-black z-50 select-none mobile-safe-area-bar relative shrink-0">
+                <div className={`w-full bg-black z-50 select-none relative shrink-0 ${
+                  isPortraitMode ? "mobile-safe-area-bar" : "mobile-safe-area-bar-landscape"
+                }`}>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      toggleFullscreen();
+                      handleExitFullscreen();
                     }}
                     className="mobile-exit-btn"
                   >
@@ -1314,7 +1356,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                         : { src: getSecureIframeUrl(game.iframeUrl) }
                       )}
                       onLoad={() => setIsIframeLoaded(true)}
-                      className={`border-none w-full flex-1 relative z-0 ${
+                      className={`border-none w-full relative z-0 ${
+                        isFullscreen && isMobileDevice && !isPortraitMode ? "landscape-game-iframe" : "flex-1"
+                      } ${
                         !isInteracting ? "pointer-events-none" : "pointer-events-auto"
                       }`}
                       allow="autoplay; fullscreen; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
