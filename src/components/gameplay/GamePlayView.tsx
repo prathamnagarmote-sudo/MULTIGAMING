@@ -1264,12 +1264,17 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   }
                 }
               }}
+              style={
+                isFullscreen && isMobileDevice && isPortraitMode
+                  ? { top: '30px' }
+                  : {}
+              }
               className={`overflow-hidden z-10 ${
                 isFullscreen
                   ? isMobileDevice
                     ? isPortraitMode
-                      // Portrait game on mobile: fill the full screen vertically (absolute layout, overlay safe-area-bar)
-                      ? "absolute inset-0 w-full bg-black"
+                      // Portrait game on mobile: fill the full screen vertically offset by exit bar height
+                      ? "absolute bottom-0 left-0 right-0 w-full bg-black"
                       // Landscape game on mobile: rotate 90deg only if the device is physically held in portrait mode
                       : isDevicePortrait
                         ? "rotate-landscape-mobile bg-black" // CSS class handles fixed positioning, rotation, and flex column
@@ -1372,7 +1377,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                       )}
                       onLoad={() => setIsIframeLoaded(true)}
                       className={`border-none w-full relative z-0 ${
-                        isFullscreen && isMobileDevice && !isPortraitMode ? "landscape-game-iframe" : "flex-1"
+                        isFullscreen && isMobileDevice && !isPortraitMode ? "landscape-game-iframe" : "h-full"
                       } ${
                         !isInteracting ? "pointer-events-none" : "pointer-events-auto"
                       }`}
