@@ -1156,7 +1156,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           /* Vertical text for the exit button inside the narrow 30px bar */
           .mobile-exit-text-landscape {
             writing-mode: vertical-rl;
-            text-orientation: mixed;
+            text-orientation: upright;
             font-family: system-ui, -apple-system, sans-serif;
             font-weight: 800;
             font-size: 7.5px;
