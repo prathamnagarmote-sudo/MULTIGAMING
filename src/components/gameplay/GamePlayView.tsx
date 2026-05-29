@@ -1195,9 +1195,11 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                     : isPortraitMode
                       ? "absolute inset-0 h-full w-auto aspect-[9/16] mx-auto flex-shrink-0 bg-black"
                       : "absolute inset-0 w-full h-full flex-shrink-0 bg-black"
-                  : isPortraitMode
-                    ? `relative h-[68vh] md:h-[72vh] w-auto max-w-full ${aspectClass} mx-auto flex-shrink-0 bg-transparent`
-                    : `relative w-full max-w-5xl aspect-video mx-auto flex-shrink-0 bg-black rounded-xl shadow-2xl border border-white/10`
+                  : !hasStarted && isMobileDevice
+                    ? "relative w-full flex flex-col bg-transparent" // Mobile pre-start view: natural vertical layout, no aspect lock!
+                    : isPortraitMode
+                      ? `relative h-[68vh] md:h-[72vh] w-auto max-w-full ${aspectClass} mx-auto flex-shrink-0 bg-transparent`
+                      : `relative w-full max-w-5xl aspect-video mx-auto flex-shrink-0 bg-black rounded-xl shadow-2xl border border-white/10`
               }`}
             >
               {/* Mobile Fullscreen Safe Area Top Bar inside rotated/portrait container */}
@@ -1286,28 +1288,32 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   </>
                 )
               ) : (
-                <div className="absolute inset-0 z-30 flex flex-col items-center justify-center overflow-hidden bg-black/85 rounded-xl">
+                <div className={`z-30 flex flex-col items-center justify-center overflow-hidden bg-black/85 ${
+                  isMobileDevice 
+                    ? "relative w-full py-8 px-6 min-h-[420px]" // Premium, natural page content layout on mobile!
+                    : "absolute inset-0 rounded-xl" // Centered overlay inside iframe container on PC
+                }`}>
                   {/* Sleek blurred backdrop of the game banner or thumbnail */}
                   <div 
-                    className="absolute inset-0 bg-cover bg-center blur-[12px] opacity-40 scale-105 pointer-events-none"
+                    className="absolute inset-0 bg-cover bg-center blur-[20px] opacity-35 scale-105 pointer-events-none"
                     style={{ backgroundImage: `url(${game.banner || game.thumbnail})` }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/80 to-black z-10 pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/75 to-black z-10 pointer-events-none" />
                   
                   {/* Central Cyberpunk Interactive Cover Card */}
-                  <div className="relative z-20 flex flex-col items-center max-w-md px-6 text-center select-none">
+                  <div className="relative z-20 flex flex-col items-center w-full max-w-md text-center select-none">
                     <motion.div 
                       initial={{ scale: 0.9, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       transition={{ duration: 0.5 }}
-                      className="relative group mb-4"
+                      className={`relative group ${isMobileDevice ? "mb-5 w-full max-w-[260px] aspect-[4/3] rounded-2xl overflow-hidden shadow-[0_15px_35px_rgba(0,0,0,0.6)] border border-white/15" : "mb-4"}`}
                     >
-                      {/* Glowing background halo */}
-                      <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-electric-blue to-neon-purple opacity-40 blur-lg group-hover:opacity-75 transition duration-500" />
+                      {/* Glowing background halo on PC, direct game banner card on mobile */}
+                      {!isMobileDevice && <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-electric-blue to-neon-purple opacity-40 blur-lg group-hover:opacity-75 transition duration-500" />}
                       <img 
-                        src={game.thumbnail} 
+                        src={isMobileDevice ? (game.banner || game.thumbnail) : game.thumbnail} 
                         alt={game.title} 
-                        className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border border-white/20 shadow-2xl animate-pulse-subtle"
+                        className={isMobileDevice ? "w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" : "relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border border-white/20 shadow-2xl animate-pulse-subtle"}
                       />
                     </motion.div>
                     
@@ -1315,57 +1321,70 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                       initial={{ y: 20, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
                       transition={{ delay: 0.1, duration: 0.5 }}
-                      className="text-xl sm:text-2xl font-heading font-black text-white uppercase italic tracking-wider leading-tight mb-0.5"
+                      className="text-2xl sm:text-3xl font-heading font-black text-white uppercase italic tracking-wider leading-tight mb-1 drop-shadow-md"
                     >
                       {game.title}
                     </motion.h2>
                     
-                    <motion.p 
-                      initial={{ y: 20, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      transition={{ delay: 0.2, duration: 0.5 }}
-                      className="text-[10px] sm:text-xs text-white/50 font-semibold mb-3 font-mono"
-                    >
-                      By {game.developer} • {game.plays} Plays
-                    </motion.p>
+                    {!isMobileDevice && (
+                      <motion.p 
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.2, duration: 0.5 }}
+                        className="text-[10px] sm:text-xs text-white/50 font-semibold mb-3 font-mono"
+                      >
+                        By {game.developer} • {game.plays} Plays
+                      </motion.p>
+                    )}
                     
-                    {/* Device Mode Notice Badges */}
+                    {/* Device Mode & Rating Notice Badges (CrazyGames Style layout on mobile) */}
                     <motion.div 
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.25 }}
-                      className="flex flex-wrap items-center justify-center gap-2 mb-5"
+                      className="flex flex-wrap items-center justify-center gap-3 mb-6"
                     >
-                      <span className="flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 text-[8px] sm:text-[9px] font-extrabold uppercase tracking-widest bg-white/5 text-white/70 border border-white/10 rounded-md">
-                        {game.isPortrait ? (
-                          <>
-                            <Smartphone size={10} className="text-electric-blue" />
-                            Portrait Mode
-                          </>
-                        ) : (
-                          <>
-                            <Laptop size={10} className="text-neon-purple" />
-                            Landscape Mode
-                          </>
-                        )}
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest bg-white/5 text-white/70 border border-white/10 rounded-lg">
+                        <Sparkles size={11} className="text-amber-400" />
+                        <span>{(ratingPercentage / 10).toFixed(1)}/10</span>
                       </span>
-                      <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 text-[8px] sm:text-[9px] font-bold uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md">
-                        ★ {ratingPercentage}% Score
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest bg-white/5 text-white/70 border border-white/10 rounded-lg">
+                        <Gamepad size={11} className="text-electric-blue" />
+                        <span>{game.genre}</span>
                       </span>
+                      {!isMobileDevice && (
+                        <span className="flex items-center gap-1 px-2.5 py-1 text-[9px] sm:text-[10px] font-extrabold uppercase tracking-widest bg-white/5 text-white/70 border border-white/10 rounded-lg">
+                          {game.isPortrait ? (
+                            <>
+                              <Smartphone size={10} className="text-electric-blue" />
+                              Portrait Mode
+                            </>
+                          ) : (
+                            <>
+                              <Laptop size={10} className="text-neon-purple" />
+                              Landscape Mode
+                            </>
+                          )}
+                        </span>
+                      )}
                     </motion.div>
                     
                     <motion.button
                       onClick={handleStartPlay}
                       initial={{ scale: 0.9, opacity: 0 }}
-                      animate={{ scale: [0.95, 1.05, 0.95], opacity: 1 }}
+                      animate={{ scale: [0.98, 1.02, 0.98], opacity: 1 }}
                       transition={{ 
                         opacity: { duration: 0.5 },
-                        scale: { repeat: Infinity, duration: 2.5, ease: "easeInOut" }
+                        scale: { repeat: Infinity, duration: 3, ease: "easeInOut" }
                       }}
-                      className="group relative flex items-center justify-center gap-2.5 px-6 py-3.5 sm:px-8 sm:py-4 bg-gradient-to-r from-electric-blue via-neon-cyan to-neon-purple text-white font-heading font-black text-[11px] sm:text-xs uppercase tracking-widest rounded-xl shadow-[0_0_20px_rgba(0,240,255,0.4)] cursor-pointer hover:brightness-110 active:scale-95 transition-all"
+                      className={`group relative flex items-center justify-center gap-2.5 font-heading font-black uppercase transition-all shadow-[0_8px_25px_rgba(124,58,237,0.45)] cursor-pointer hover:brightness-110 active:scale-95 ${
+                        isMobileDevice
+                          ? "w-full max-w-[280px] py-4 px-6 rounded-2xl bg-gradient-to-r from-[#7c3aed] to-[#6d28d9] text-white text-xs tracking-wider"
+                          : "px-6 py-3.5 sm:px-8 sm:py-4 bg-gradient-to-r from-electric-blue via-neon-cyan to-neon-purple text-white text-[11px] sm:text-xs tracking-widest rounded-xl"
+                      }`}
                     >
-                      <Gamepad className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-12 transition-transform duration-300" />
-                      <span>PLAY NOW</span>
+                      <Gamepad className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
+                      <span>Play now</span>
                     </motion.button>
                   </div>
                 </div>
