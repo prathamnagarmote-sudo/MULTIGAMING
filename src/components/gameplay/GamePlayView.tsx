@@ -1049,16 +1049,16 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
            * 3px margin above/below. This allows it to sit perfectly aligned with the camera hole/notch.
            */
           .mobile-safe-area-bar {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
+            position: relative;
             display: flex;
             align-items: center;
             justify-content: flex-start;
             box-sizing: border-box;
-            height: 30px;
-            padding: 0 10px;
+            width: 100%;
+            height: calc(30px + env(safe-area-inset-top, 0px));
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-left: max(env(safe-area-inset-top, 0px), env(safe-area-inset-left, 0px), 12px);
+            padding-right: max(env(safe-area-inset-right, 0px), 12px);
             background: #000000;
             z-index: 9999;
           }
@@ -1222,7 +1222,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   }
                 }
               }}
-              className={`overflow-hidden z-10 ${
+              className={`overflow-hidden z-10 flex flex-col ${
                 isFullscreen
                   ? isMobileDevice
                     ? isPortraitMode
@@ -1242,7 +1242,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             >
               {/* Mobile Fullscreen Safe Area Top Bar inside rotated/portrait container */}
               {isFullscreen && isMobileDevice && (
-                <div className="absolute top-0 left-0 right-0 h-[30px] bg-black z-50 select-none mobile-safe-area-bar">
+                <div className="w-full bg-black z-50 select-none mobile-safe-area-bar relative shrink-0">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1311,11 +1311,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                         : { src: getSecureIframeUrl(game.iframeUrl) }
                       )}
                       onLoad={() => setIsIframeLoaded(true)}
-                      className={`border-none ${
-                        isFullscreen && isMobileDevice
-                          ? "absolute top-[30px] left-0 w-full h-[calc(100%-30px)] z-0"
-                          : "w-full h-full relative z-0"
-                      } ${
+                      className={`border-none w-full flex-1 relative z-0 ${
                         !isInteracting ? "pointer-events-none" : "pointer-events-auto"
                       }`}
                       allow="autoplay; fullscreen; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
