@@ -1032,13 +1032,13 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           .rotate-landscape-mobile {
             transform: rotate(90deg) !important;
             transform-origin: center !important;
-            width: 100vh !important;
-            height: 100vw !important;
-            position: fixed !important;
+            width: 100dvh !important;
+            height: 100dvw !important;
+            position: absolute !important;
             top: 50% !important;
             left: 50% !important;
-            margin-top: -50vh !important;
-            margin-left: -50vw !important;
+            margin-top: -50dvh !important;
+            margin-left: -50dvw !important;
             z-index: 9999 !important;
           }
 
@@ -1160,8 +1160,11 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           }}
           style={isFullscreen && isMobileDevice ? { height: '100dvh', width: '100dvw', top: 0, left: 0 } : {}}
           className={`w-full overflow-hidden ${isFullscreen
-            ? `fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black ${isBarHidden ? "p-0" : "p-0 md:pb-[64px]"
-            }`
+            ? `fixed inset-0 z-[9999] bg-black ${
+                isMobileDevice 
+                  ? "block" 
+                  : `flex flex-col items-center justify-center ${isBarHidden ? "p-0" : "p-0 md:pb-[64px]"}`
+              }`
             : "relative flex flex-col bg-[#0b0b12]/80 border-2 border-white/20 shadow-[0_25px_60px_rgba(0,0,0,0.8)] rounded-2xl z-20 overflow-hidden"
             }`}
         >
