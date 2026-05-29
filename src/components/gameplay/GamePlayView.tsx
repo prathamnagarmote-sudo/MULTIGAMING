@@ -1073,22 +1073,21 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
           /*
            * Landscape-specific safe area bar:
-           * Renders as a vertical strip on the left side of the screen.
-           * Perfect notch-safe inset at top of rotated screen is mapped to padding-left.
+           * Renders as a beautiful, narrow vertical strip on the left side of the screen.
+           * Fixed 36px width to perfectly accommodate the Exit button, matching CrazyGames Bowman layout.
            */
           .mobile-safe-area-bar-landscape {
             position: absolute !important;
             top: 0 !important;
             left: 0 !important;
             bottom: 0 !important;
-            width: calc(38px + env(safe-area-inset-top, 0px)) !important;
+            width: 36px !important;
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
             justify-content: flex-start !important;
             box-sizing: border-box !important;
-            padding-top: max(env(safe-area-inset-left, 0px), 12px) !important;
-            padding-left: env(safe-area-inset-top, 0px) !important;
+            padding-top: 12px !important;
             background: #000000 !important;
             z-index: 9999 !important;
           }
@@ -1098,9 +1097,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             position: absolute !important;
             top: 0 !important;
             bottom: 0 !important;
-            left: calc(38px + env(safe-area-inset-top, 0px)) !important;
+            left: 36px !important;
             right: 0 !important;
-            width: calc(100% - (38px + env(safe-area-inset-top, 0px))) !important;
+            width: calc(100% - 36px) !important;
             height: 100% !important;
           }
 
