@@ -1269,7 +1269,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                   ? isMobileDevice
                     ? isPortraitMode
                       // Portrait game on mobile: fill the full screen vertically (absolute layout, overlay safe-area-bar)
-                      ? "absolute inset-0 w-full bg-black"
+                      ? "absolute inset-0 w-full h-full bg-black"
                       // Landscape game on mobile: rotate 90deg only if the device is physically held in portrait mode
                       : isDevicePortrait
                         ? "rotate-landscape-mobile bg-black" // CSS class handles fixed positioning, rotation, and flex column
@@ -1374,7 +1374,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                       className={`border-none ${
                         isFullscreen && isMobileDevice
                           ? isPortraitMode
-                            ? "absolute top-[30px] bottom-0 left-0 right-0 z-0"
+                            ? "absolute top-[30px] left-0 w-full h-[calc(100%-30px)] z-0"
                             : "landscape-game-iframe"
                           : "w-full h-full relative z-0"
                       } ${
