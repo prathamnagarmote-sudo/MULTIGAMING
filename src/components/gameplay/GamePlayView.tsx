@@ -1353,7 +1353,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                     className="mobile-exit-btn-landscape"
                   >
                     <LogOut style={{ transform: "scaleX(-1)" }} className="mobile-exit-icon-landscape" />
-                    <span>Exit</span>
+                    <span className="mobile-exit-text-landscape">Exit</span>
                   </button>
                 </div>
               )}
