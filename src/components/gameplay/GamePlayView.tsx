@@ -62,20 +62,10 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const [hasStarted, setHasStarted] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
   const [isDevicePortrait, setIsDevicePortrait] = useState(true);
-  const [notchSide, setNotchSide] = useState<"left" | "right">("left");
 
-  // Dynamically monitor screen dimensions and safe areas to support native rotations & notches
+  // Dynamically monitor screen dimensions to support native rotations
   useEffect(() => {
     if (typeof window === "undefined") return;
-
-    // Create helper element to read safe-area insets in JS
-    const helper = document.createElement("div");
-    helper.style.position = "fixed";
-    helper.style.left = "env(safe-area-inset-left)";
-    helper.style.right = "env(safe-area-inset-right)";
-    helper.style.visibility = "hidden";
-    helper.style.pointerEvents = "none";
-    document.body.appendChild(helper);
 
     const handleResize = () => {
       const orientationObj = (window.screen as any)?.orientation;
@@ -84,16 +74,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                               window.orientation === -90;
       
       setIsDevicePortrait(!isLandscapeType);
-
-      const style = window.getComputedStyle(helper);
-      const leftVal = parseFloat(style.left) || 0;
-      const rightVal = parseFloat(style.right) || 0;
-
-      if (rightVal > 0 && rightVal > leftVal) {
-        setNotchSide("right");
-      } else {
-        setNotchSide("left");
-      }
     };
 
     window.addEventListener("resize", handleResize);
@@ -107,9 +87,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     handleResize();
 
     return () => {
-      if (helper.parentNode) {
-        helper.parentNode.removeChild(helper);
-      }
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
       if (orientationObj) {
@@ -1081,10 +1058,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             left: 0 !important;
             width: 100dvh !important;
             height: 100dvw !important;
-            transform: rotate(90deg) !important;
             transform-origin: top left !important;
-            /* After 90deg rotation around top-left, the element moves up by its width.
-               translateX(100vw) shifts it right so it maps onto the screen perfectly. */
             transform: translateX(100vw) rotate(90deg) !important;
             z-index: 99999 !important;
             background: #000 !important;
@@ -1109,51 +1083,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             padding: 0 10px;
             background: #000000;
             z-index: 9999;
-          }
-
-          /*
-           * Landscape-specific safe area bar:
-           * Renders as a beautiful, narrow vertical strip on the left side of the screen.
-           * Reduced to an ultra-compact 30px width for maximum gaming area.
-           */
-          .mobile-safe-area-bar-landscape {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            bottom: 0 !important;
-            width: 30px !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            justify-content: flex-start !important;
-            box-sizing: border-box !important;
-            padding-top: 12px !important;
-            background: #000000 !important;
-            z-index: 9999 !important;
-          }
-          .mobile-safe-area-bar-landscape-right {
-            left: auto !important;
-            right: 0 !important;
-          }
-
-          /* Landscape iframe: absolutely positioned to the right of the safe area bar */
-          .landscape-game-iframe {
-            position: absolute !important;
-            top: 0 !important;
-            bottom: 0 !important;
-            left: 30px !important;
-            right: 0 !important;
-            width: calc(100% - 30px) !important;
-            height: 100% !important;
-          }
-          .landscape-game-iframe-right {
-            position: absolute !important;
-            top: 0 !important;
-            bottom: 0 !important;
-            right: 30px !important;
-            left: 0 !important;
-            width: calc(100% - 30px) !important;
-            height: 100% !important;
           }
 
           /* Exit button — optimized size, premium gradient style matching CrazyGames level */
@@ -1182,55 +1111,93 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             background: #6d28d9;
           }
 
-          /* Exit button — beautiful vertical layout for landscape games */
-          .mobile-exit-btn-landscape {
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-            padding: 6px 0;
-            width: 22px;
-            height: 56px;
-            border-radius: 4px;
-            background: #7c3aed;
-            color: white;
-            border: none;
-            cursor: pointer;
-            transition: background 0.15s, transform 0.1s;
-            -webkit-tap-highlight-color: transparent;
-            flex-shrink: 0;
-            box-shadow: 0 2px 6px rgba(124, 58, 237, 0.4);
-          }
-          .mobile-exit-btn-landscape:active {
-            transform: scale(0.92);
-            background: #6d28d9;
-          }
-
-          /* Vertical text for the exit button inside the narrow 30px bar */
-          .mobile-exit-text-landscape {
-            display: inline-block;
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            transform: rotate(180deg);
-            font-family: system-ui, -apple-system, sans-serif;
-            font-weight: 800;
-            font-size: 8.5px;
-            letter-spacing: 0.02em;
-            line-height: 1;
-            white-space: nowrap;
-          }
-
-          /* Exit icons */
+          /* Exit icon for portrait */
           .mobile-exit-icon {
             width: 12px;
             height: 12px;
             flex-shrink: 0;
           }
-          .mobile-exit-icon-landscape {
-            width: 11px;
-            height: 11px;
-            flex-shrink: 0;
-          }
+        }
+
+        /*
+         * ===== LANDSCAPE GAME STYLES =====
+         * These are outside @media (max-width: 767px) because when a phone is
+         * physically held in landscape, the viewport width exceeds 767px (~932px),
+         * which would prevent these styles from applying. These classes are only
+         * rendered conditionally in JSX when isMobileDevice && isFullscreen && !isPortraitMode.
+         */
+
+        /* Landscape-specific safe area bar: narrow vertical strip on the side */
+        .mobile-safe-area-bar-landscape {
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          bottom: 0 !important;
+          width: 30px !important;
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          justify-content: flex-start !important;
+          box-sizing: border-box !important;
+          padding-top: 12px !important;
+          background: #000000 !important;
+          z-index: 9999 !important;
+        }
+
+        /* Landscape iframe: absolutely positioned beside the safe area bar */
+        .landscape-game-iframe {
+          position: absolute !important;
+          top: 0 !important;
+          bottom: 0 !important;
+          left: 30px !important;
+          right: 0 !important;
+          width: calc(100% - 30px) !important;
+          height: 100% !important;
+        }
+
+        /* Exit button — vertical layout for landscape games */
+        .mobile-exit-btn-landscape {
+          display: inline-flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: space-between;
+          padding: 6px 0;
+          width: 22px;
+          height: 56px;
+          border-radius: 4px;
+          background: #7c3aed;
+          color: white;
+          border: none;
+          cursor: pointer;
+          transition: background 0.15s, transform 0.1s;
+          -webkit-tap-highlight-color: transparent;
+          flex-shrink: 0;
+          box-shadow: 0 2px 6px rgba(124, 58, 237, 0.4);
+        }
+        .mobile-exit-btn-landscape:active {
+          transform: scale(0.92);
+          background: #6d28d9;
+        }
+
+        /* Vertical text for the exit button inside the narrow 30px bar */
+        .mobile-exit-text-landscape {
+          display: inline-block;
+          writing-mode: vertical-rl;
+          text-orientation: mixed;
+          transform: rotate(180deg);
+          font-family: system-ui, -apple-system, sans-serif;
+          font-weight: 800;
+          font-size: 8.5px;
+          letter-spacing: 0.02em;
+          line-height: 1;
+          white-space: nowrap;
+        }
+
+        /* Exit icon for landscape */
+        .mobile-exit-icon-landscape {
+          width: 11px;
+          height: 11px;
+          flex-shrink: 0;
         }
       `}</style>
 
@@ -1399,9 +1366,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
               {/* Mobile Fullscreen Safe Area Top Bar (Landscape Games) */}
               {isFullscreen && isMobileDevice && !isPortraitMode && (
-                <div className={`mobile-safe-area-bar-landscape select-none ${
-                  notchSide === "right" ? "mobile-safe-area-bar-landscape-right" : ""
-                }`}>
+                <div className="mobile-safe-area-bar-landscape select-none">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1476,9 +1441,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                         isFullscreen && isMobileDevice
                           ? isPortraitMode
                             ? "absolute top-[30px] left-0 w-full h-[calc(100%-30px)] z-0"
-                            : notchSide === "right"
-                              ? "landscape-game-iframe-right"
-                              : "landscape-game-iframe"
+                            : "landscape-game-iframe"
                           : "w-full h-full relative z-0"
                       } ${
                         !isInteracting ? "pointer-events-none" : "pointer-events-auto"
