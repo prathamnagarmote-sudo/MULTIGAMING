@@ -61,6 +61,22 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const [isPortraitOverride, setIsPortraitOverride] = useState<boolean | null>(null);
   const [hasStarted, setHasStarted] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [isDevicePortrait, setIsDevicePortrait] = useState(true);
+
+  // Dynamically monitor screen dimensions to support native rotations
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleResize = () => {
+      setIsDevicePortrait(window.innerWidth < window.innerHeight);
+    };
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
+    handleResize();
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
+    };
+  }, []);
 
   // Sync ref to avoid stale closures in background ZIP prefetch effect
   const hasStartedRef = useRef(hasStarted);
@@ -805,6 +821,16 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
       if (isCurrentlyFullscreen) {
         setShowEscToast(true);
         
+        // Lock screen orientation to landscape on mobile devices for landscape games
+        if (isMobileDevice && !isPortraitMode) {
+          const orientation = (window.screen as any).orientation || (window.screen as any).mozOrientation || (window.screen as any).msOrientation;
+          if (orientation && orientation.lock) {
+            orientation.lock("landscape").catch((err: any) => {
+              console.warn("Screen orientation lock to landscape failed:", err);
+            });
+          }
+        }
+
         // Auto-hide the premium toolbar after 3 seconds so it does not obstruct the gameplay UI
         barHideTimer = setTimeout(() => {
           setIsBarHidden(true);
@@ -825,6 +851,18 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
         setShowEscToast(false);
         setIsBarHidden(false); // Reset bar hidden state when exiting fullscreen
         
+        // Unlock screen orientation on mobile when exiting fullscreen
+        if (isMobileDevice) {
+          const orientation = (window.screen as any).orientation || (window.screen as any).mozOrientation || (window.screen as any).msOrientation;
+          if (orientation && orientation.unlock) {
+            try {
+              orientation.unlock();
+            } catch (err) {
+              console.warn("Screen orientation unlock failed:", err);
+            }
+          }
+        }
+
         // Re-focus the iframe when returning to regular page view
         focusTimer = setTimeout(() => {
           if (iframeRef.current) {
@@ -1190,8 +1228,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                     ? isPortraitMode
                       // Portrait game on mobile: fill the full screen vertically
                       ? "absolute inset-0 w-full bg-black"
-                      // Landscape game on mobile: rotate 90deg to simulate landscape orientation
-                      : "bg-black rotate-landscape-mobile"
+                      // Landscape game on mobile: rotate 90deg only if the device is physically held in portrait mode
+                      : `bg-black ${isDevicePortrait ? "rotate-landscape-mobile" : "absolute inset-0 w-full h-full"}`
                     : isPortraitMode
                       ? "absolute inset-0 h-full w-auto aspect-[9/16] mx-auto flex-shrink-0 bg-black"
                       : "absolute inset-0 w-full h-full flex-shrink-0 bg-black"
