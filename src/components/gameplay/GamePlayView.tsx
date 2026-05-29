@@ -1040,10 +1040,30 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
     } else {
       aspectClass = "aspect-[9/16]";
     }
+  } else {
+    // Landscape game ratios on PC
+    if (gameAspect === "3:4") {
+      aspectClass = "aspect-[4/3]";
+    } else if (gameAspect === "2:3") {
+      aspectClass = "aspect-[3/2]";
+    } else {
+      aspectClass = "aspect-video"; // default 16:9
+    }
   }
 
   return (
-    <div className="relative w-full text-white pb-16">
+    <div className="relative w-full text-white pb-16 min-h-screen overflow-hidden">
+      {/* Gorgeous themed ambient page background blur */}
+      {!isMobileDevice && (
+        <div
+          className="absolute top-0 left-0 right-0 h-[600px] bg-cover bg-center blur-[120px] opacity-[0.18] pointer-events-none z-0 scale-110"
+          style={{
+            backgroundImage: `url(${game.banner || game.thumbnail})`,
+            maskImage: "linear-gradient(to bottom, black 20%, transparent 80%)",
+            WebkitMaskImage: "linear-gradient(to bottom, black 20%, transparent 80%)"
+          }}
+        />
+      )}
       <style>{`
         @media (max-width: 767px) {
           /*
@@ -1261,14 +1281,25 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
               iframeRef.current.focus();
             }
           }}
-          style={isFullscreen && isMobileDevice ? { height: '100dvh', width: '100dvw', top: 0, left: 0 } : {}}
-          className={`w-full overflow-hidden ${isFullscreen
-            ? `fixed inset-0 z-[9999] bg-black ${
+          style={
+            isFullscreen 
+              ? (isMobileDevice ? { height: '100dvh', width: '100dvw', top: 0, left: 0 } : {})
+              : isPortraitMode 
+                ? {} 
+                : {
+                    boxShadow: `0 30px 70px -10px ${(game as any).accentColor || '#7c3aed'}25, 0 0 20px 0 ${(game as any).accentColor || '#7c3aed'}10`,
+                    borderColor: `${(game as any).accentColor || '#7c3aed'}35`
+                  }
+          }
+          className={`overflow-hidden ${isFullscreen
+            ? `w-full fixed inset-0 z-[9999] bg-black ${
                 isMobileDevice 
                   ? "block" 
                   : `flex flex-col items-center justify-center ${isBarHidden ? "p-0" : "p-0 md:pb-[64px]"}`
               }`
-            : "relative flex flex-col bg-[#0b0b12]/80 border-2 border-white/20 shadow-[0_25px_60px_rgba(0,0,0,0.8)] rounded-2xl z-20 overflow-hidden"
+            : isPortraitMode
+              ? "w-full relative flex flex-col bg-[#0b0b12]/80 border-2 border-white/20 shadow-[0_25px_60px_rgba(0,0,0,0.8)] rounded-2xl z-20 overflow-hidden"
+              : `w-full max-w-5xl ${aspectClass} mx-auto relative flex flex-col bg-black border-2 shadow-2xl rounded-2xl z-20 overflow-hidden transition-all duration-500`
             }`}
         >
             {/* Ambient Blurred Background backdrop (shown in fullscreen or portrait mode on PC only) */}
@@ -1345,7 +1376,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                     ? "relative w-full flex flex-col bg-transparent" // Mobile pre-start view: natural vertical layout, no aspect lock!
                     : isPortraitMode
                       ? `relative h-[68vh] md:h-[72vh] w-auto max-w-full ${aspectClass} mx-auto flex-shrink-0 bg-transparent flex flex-col`
-                      : `relative w-full max-w-5xl aspect-video mx-auto flex-shrink-0 bg-black rounded-xl shadow-2xl border border-white/10 flex flex-col`
+                      : "w-full h-full relative z-10 flex flex-col bg-transparent" // Landscape game on PC fills the main outer glowing frame completely!
               }`}
             >
               {/* Mobile Fullscreen Safe Area Top Bar (Portrait Games) */}
