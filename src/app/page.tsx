@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Home as HomeIcon, Settings, User } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
@@ -23,7 +23,10 @@ export default function Home() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
 
-  // Safely load database on mount
+  // Thread-safe ref to track if view/game state changes originated from a popstate event
+  const isPopStateRef = useRef(false);
+
+  // Safely load database on mount & set up popstate tracking
   useEffect(() => {
     const fetchGames = async () => {
       setIsLoading(true);
@@ -67,27 +70,73 @@ export default function Home() {
         }
       }
     }
+
+    // Handle back/forward popstate events seamlessly across mobile and desktop
+    const handlePopState = () => {
+      isPopStateRef.current = true;
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get("view");
+      const gameParam = params.get("game");
+
+      if (viewParam === "dashboard") {
+        setActiveView("dashboard");
+        setActiveGameId(null);
+      } else if (gameParam) {
+        setActiveView("play");
+        setActiveGameId(gameParam);
+      } else if (viewParam === "login") {
+        setActiveView("login");
+        setActiveGameId(null);
+      } else {
+        setActiveView("home");
+        setActiveGameId(null);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
   }, []);
 
-  // Persist view and game states to URL query parameters dynamically
+  // Persist view and game states to URL query parameters dynamically with back history support
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
+      const currentViewParam = params.get("view");
+      const currentGameParam = params.get("game");
+
+      let nextViewParam: string | null = null;
+      let nextGameParam: string | null = null;
+
       if (activeView === "play" && activeGameId) {
-        params.set("game", activeGameId);
-        params.delete("view");
+        nextGameParam = activeGameId;
       } else if (activeView === "dashboard") {
-        params.set("view", "dashboard");
-        params.delete("game");
-      } else {
-        params.delete("view");
-        params.delete("game");
+        nextViewParam = "dashboard";
+      } else if (activeView === "login") {
+        nextViewParam = "login";
       }
 
-      const newQuery = params.toString();
-      const newUrl = window.location.pathname + (newQuery ? `?${newQuery}` : "");
-      window.history.replaceState(null, "", newUrl);
+      // Only execute history adjustments if the active state differs from the URL state
+      if (currentViewParam !== nextViewParam || currentGameParam !== nextGameParam) {
+        const newParams = new URLSearchParams();
+        if (nextViewParam) newParams.set("view", nextViewParam);
+        if (nextGameParam) newParams.set("game", nextGameParam);
+
+        const newQuery = newParams.toString();
+        const newUrl = window.location.pathname + (newQuery ? `?${newQuery}` : "");
+
+        if (isPopStateRef.current) {
+          // If the change came from popstate, just replace/update path without altering stack
+          window.history.replaceState(null, "", newUrl);
+        } else {
+          // If triggered by explicit user navigation, push a new history entry!
+          window.history.pushState(null, "", newUrl);
+        }
+      }
     }
+    // Always reset popstate tracking flag
+    isPopStateRef.current = false;
   }, [activeView, activeGameId]);
 
   const refreshGames = async () => {

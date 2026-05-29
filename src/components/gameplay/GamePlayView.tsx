@@ -61,7 +61,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const [isPortraitOverride, setIsPortraitOverride] = useState<boolean | null>(null);
   const [hasStarted, setHasStarted] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
-  const [isGameInteracting, setIsGameInteracting] = useState(false);
 
   // Sync ref to avoid stale closures in background ZIP prefetch effect
   const hasStartedRef = useRef(hasStarted);
@@ -826,11 +825,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
         setShowEscToast(false);
         setIsBarHidden(false); // Reset bar hidden state when exiting fullscreen
         
-        // On mobile, automatically unlock pointer events when exiting fullscreen to ensure the page can be scrolled
-        if (isMobileDevice) {
-          setIsGameInteracting(false);
-        }
-        
         // Re-focus the iframe when returning to regular page view
         focusTimer = setTimeout(() => {
           if (iframeRef.current) {
@@ -910,7 +904,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
       await handleFullscreen();
     }
     setHasStarted(true);
-    setIsGameInteracting(true);
   };
 
   const handleFullscreen = async () => {
@@ -980,8 +973,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
   const isPortraitMode = isPortraitOverride !== null ? isPortraitOverride : !!game.isPortrait;
   const gameAspect = game.aspectRatio || (game.isPortrait ? "9:16" : "16:9");
 
-  // A game is interacting in fullscreen, or when desktop/mobile user explicitly clicks to focus/play
-  const isInteracting = isGameInteracting || isFullscreen;
+  // A game is interacting in fullscreen on mobile, or always interactive on desktop
+  const isInteracting = !isMobileDevice || isFullscreen;
 
   let aspectClass = "aspect-video";
   if (isPortraitMode) {
@@ -1122,7 +1115,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
         {/* Dedicated Player Frame wrapper - supports standard and fullscreen theater displays */}
         <div
           ref={playerFrameRef}
-          onMouseLeave={() => setIsGameInteracting(false)}
           onClick={() => {
             if (isFullscreen && iframeRef.current) {
               iframeRef.current.focus();
@@ -1184,12 +1176,11 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             {/* Dynamic Iframe Viewport Frame */}
             <div
               onClick={() => {
-                if (!isInteracting && isIframeLoaded) {
-                  if (isMobileDevice) {
+                if (isIframeLoaded) {
+                  if (isMobileDevice && !isFullscreen) {
                     toggleFullscreen();
                   } else {
-                    setIsGameInteracting(true);
-                    setTimeout(() => iframeRef.current?.focus(), 50);
+                    iframeRef.current?.focus();
                   }
                 }
               }}
@@ -1292,46 +1283,6 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                       scrolling="yes"
                       title={game.title}
                     />
-
-                    {/* Premium Focus & Interaction Overlay for Desktop & Mobile */}
-                    {!isInteracting && isIframeLoaded && (
-                      <div 
-                        className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[3px] border-2 border-dashed border-electric-blue/40 rounded-xl pointer-events-none group transition-all duration-300 hover:bg-black/75 hover:border-electric-blue/80"
-                      >
-                        <div className="flex flex-col items-center gap-3 p-6 text-center select-none max-w-sm">
-                          {/* Glowing animated Gamepad icon */}
-                          <div className="relative">
-                            <div className="absolute -inset-2 rounded-full bg-electric-blue/20 blur-md group-hover:bg-electric-blue/40 transition duration-300" />
-                            <div className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-r from-electric-blue to-neon-purple flex items-center justify-center border border-white/10 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                              <Gamepad className="w-6 h-6 sm:w-7 sm:h-7 text-white animate-pulse" />
-                            </div>
-                          </div>
-                          
-                          <span className="text-sm font-heading font-black tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-electric-blue to-neon-cyan drop-shadow-[0_2px_4px_rgba(0,240,255,0.2)]">
-                            {isMobileDevice ? "Tap to Play & Interact" : "Click to Play & Interact"}
-                          </span>
-                          <span className="text-[10px] text-white/50 leading-relaxed font-mono">
-                            {isMobileDevice 
-                              ? "Locks inputs to the game. To scroll the page, tap the 'Scroll Page' button at the top-right." 
-                              : "Locks keyboard & mouse to the game. Move cursor out of the game area to scroll the page."}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Mobile Unlock Scroll Overlay Button */}
-                    {isMobileDevice && isGameInteracting && !isFullscreen && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsGameInteracting(false);
-                        }}
-                        className="absolute top-3 right-3 z-[40] flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/85 backdrop-blur-md border border-white/20 text-white/95 active:scale-95 transition-all shadow-[0_4px_20px_rgba(0,0,0,0.5)] cursor-pointer"
-                      >
-                        <EyeOff className="w-3.5 h-3.5 text-electric-blue" />
-                        <span className="text-[10px] font-black font-heading uppercase tracking-wider">Scroll Page</span>
-                      </button>
-                    )}
                   </>
                 )
               ) : (
