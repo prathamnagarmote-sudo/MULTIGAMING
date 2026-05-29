@@ -1074,14 +1074,14 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
           /*
            * Landscape-specific safe area bar:
            * Renders as a beautiful, narrow vertical strip on the left side of the screen.
-           * Fixed 36px width to perfectly accommodate the Exit button, matching CrazyGames Bowman layout.
+           * Reduced to an ultra-compact 30px width for maximum gaming area.
            */
           .mobile-safe-area-bar-landscape {
             position: absolute !important;
             top: 0 !important;
             left: 0 !important;
             bottom: 0 !important;
-            width: 36px !important;
+            width: 30px !important;
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
@@ -1097,9 +1097,9 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             position: absolute !important;
             top: 0 !important;
             bottom: 0 !important;
-            left: 36px !important;
+            left: 30px !important;
             right: 0 !important;
-            width: calc(100% - 36px) !important;
+            width: calc(100% - 30px) !important;
             height: 100% !important;
           }
 
@@ -1129,32 +1129,40 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             background: #6d28d9;
           }
 
-          /* Exit button — vertical layout for landscape games */
+          /* Exit button — beautiful vertical layout for landscape games */
           .mobile-exit-btn-landscape {
             display: inline-flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 2px;
-            width: 32px;
-            height: 38px;
-            border-radius: 5px;
+            gap: 4px;
+            width: 22px;
+            height: 56px;
+            border-radius: 4px;
             background: #7c3aed;
             color: white;
-            font-family: system-ui, -apple-system, sans-serif;
-            font-weight: 700;
-            font-size: 8px;
-            text-transform: uppercase;
             border: none;
             cursor: pointer;
             transition: background 0.15s, transform 0.1s;
             -webkit-tap-highlight-color: transparent;
             flex-shrink: 0;
-            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
+            box-shadow: 0 2px 6px rgba(124, 58, 237, 0.4);
           }
           .mobile-exit-btn-landscape:active {
             transform: scale(0.92);
             background: #6d28d9;
+          }
+
+          /* Vertical text for the exit button inside the narrow 30px bar */
+          .mobile-exit-text-landscape {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-weight: 800;
+            font-size: 7.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 1px;
           }
 
           /* Exit icons */
@@ -1164,8 +1172,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
             flex-shrink: 0;
           }
           .mobile-exit-icon-landscape {
-            width: 12px;
-            height: 12px;
+            width: 11px;
+            height: 11px;
             flex-shrink: 0;
           }
         }
@@ -1414,8 +1422,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                       } ${
                         !isInteracting ? "pointer-events-none" : "pointer-events-auto"
                       }`}
-                      allow="autoplay; fullscreen; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
-                      allowFullScreen
+                      allow="autoplay; keyboard; gamepad; pointer-lock; accelerometer; gyroscope; microphone; camera; display-capture; web-share"
                       scrolling="yes"
                       title={game.title}
                     />
