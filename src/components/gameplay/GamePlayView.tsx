@@ -1374,7 +1374,7 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                       className={`border-none ${
                         isFullscreen && isMobileDevice
                           ? isPortraitMode
-                            ? "absolute top-[30px] left-0 w-full h-[calc(100%-30px)] z-0"
+                            ? "absolute top-[30px] bottom-0 left-0 right-0 z-0"
                             : "landscape-game-iframe"
                           : "w-full h-full relative z-0"
                       } ${
