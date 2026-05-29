@@ -1054,22 +1054,23 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
 
           /*
            * CrazyGames-style safe area bar for PORTRAIT fullscreen:
-           * 30px bar height + device notch safe inset at top.
+           * The bar height perfectly adapts to the exit button: exactly 30px high.
+           * The Exit button is vertically centered inside this compact space, leaving exactly
+           * 3px margin above/below. This allows it to sit perfectly aligned with the camera hole/notch.
            */
           .mobile-safe-area-bar {
-            position: relative;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
             display: flex;
             align-items: center;
             justify-content: flex-start;
             box-sizing: border-box;
-            width: 100%;
-            height: calc(30px + env(safe-area-inset-top, 0px));
-            padding-top: env(safe-area-inset-top, 0px);
-            padding-left: max(env(safe-area-inset-top, 0px), env(safe-area-inset-left, 0px), 12px);
-            padding-right: max(env(safe-area-inset-right, 0px), 12px);
+            height: 30px;
+            padding: 0 10px;
             background: #000000;
             z-index: 9999;
-            flex-shrink: 0;
           }
 
           /*
@@ -1267,8 +1268,8 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                 isFullscreen
                   ? isMobileDevice
                     ? isPortraitMode
-                      // Portrait game on mobile: fill the full screen vertically, flex column for safe area + iframe
-                      ? "absolute inset-0 w-full bg-black flex flex-col"
+                      // Portrait game on mobile: fill the full screen vertically (absolute layout, overlay safe-area-bar)
+                      ? "absolute inset-0 w-full bg-black"
                       // Landscape game on mobile: rotate 90deg only if the device is physically held in portrait mode
                       : isDevicePortrait
                         ? "rotate-landscape-mobile bg-black" // CSS class handles fixed positioning, rotation, and flex column
@@ -1283,11 +1284,25 @@ export function GamePlayView({ gameId, onBackToHome, onSelectGame }: GamePlayVie
                       : `relative w-full max-w-5xl aspect-video mx-auto flex-shrink-0 bg-black rounded-xl shadow-2xl border border-white/10 flex flex-col`
               }`}
             >
-              {/* Mobile Fullscreen Safe Area Top Bar — works for both portrait and landscape games */}
-              {isFullscreen && isMobileDevice && (
-                <div className={`w-full bg-black z-50 select-none relative shrink-0 ${
-                  isPortraitMode ? "mobile-safe-area-bar" : "mobile-safe-area-bar-landscape"
-                }`}>
+              {/* Mobile Fullscreen Safe Area Top Bar (Portrait Games) */}
+              {isFullscreen && isMobileDevice && isPortraitMode && (
+                <div className="absolute top-0 left-0 right-0 h-[30px] bg-black z-50 select-none mobile-safe-area-bar">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFullscreen();
+                    }}
+                    className="mobile-exit-btn"
+                  >
+                    <LogOut style={{ transform: "scaleX(-1)" }} className="mobile-exit-icon" />
+                    <span>Exit</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Mobile Fullscreen Safe Area Top Bar (Landscape Games) */}
+              {isFullscreen && isMobileDevice && !isPortraitMode && (
+                <div className="w-full bg-black z-50 select-none mobile-safe-area-bar-landscape relative shrink-0">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
